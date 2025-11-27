@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\V1\Calendars\CalendarController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Api\V1\Ingredients\IngredientController;
 use App\Http\Controllers\Api\V1\Subscriptions\SubscriptionController;
+use App\Http\Controllers\Api\V1\LegalDocsController;
+use App\Http\Controllers\Api\V1\Auth\VerificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +26,15 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/login', [LoginController::class, 'store'])->name('api.v1.auth.login');
         Route::post('/register', [RegisterController::class, 'store'])->name('api.v1.auth.register');
+        
+        // Email verification (public - called from email link)
+        Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->name('api.v1.auth.verify');
+    });
+    
+    // Legal Documents (public)
+    Route::prefix('legal')->group(function () {
+        Route::get('/terms', [LegalDocsController::class, 'terms'])->name('api.v1.legal.terms');
+        Route::get('/privacy', [LegalDocsController::class, 'privacy'])->name('api.v1.legal.privacy');
     });
 
     // Protected routes (require authentication)
@@ -35,6 +46,16 @@ Route::prefix('v1')->group(function () {
             Route::get('/user', function (Request $request) {
                 return $request->user();
             })->name('api.v1.auth.user');
+            
+            // Email verification (protected)
+            Route::post('/email/resend', [VerificationController::class, 'resend'])->name('api.v1.auth.resend');
+            Route::get('/email/status', [VerificationController::class, 'status'])->name('api.v1.auth.status');
+        });
+        
+        // Legal Documents (protected - for acceptance tracking)
+        Route::prefix('legal')->group(function () {
+            Route::post('/terms/accept', [LegalDocsController::class, 'acceptTerms'])->name('api.v1.legal.terms.accept');
+            Route::post('/privacy/accept', [LegalDocsController::class, 'acceptPrivacy'])->name('api.v1.legal.privacy.accept');
         });
 
         // Recipe routes
