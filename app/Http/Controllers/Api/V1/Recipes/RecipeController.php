@@ -18,7 +18,7 @@ class RecipeController extends Controller
     {
         $this->recipeService = $recipeService;
     }
-{
+
     /**
      * Display a listing of recipes with filtering.
      */
