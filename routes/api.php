@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Recipes\RecipeController;
 use App\Http\Controllers\Api\V1\Calendars\CalendarController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Api\V1\Ingredients\IngredientController;
+use App\Http\Controllers\Api\V1\Subscriptions\SubscriptionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +68,16 @@ Route::prefix('v1')->group(function () {
             Route::delete('/', [ProfileController::class, 'destroy'])->name('api.v1.profile.destroy');
         });
         
-        // Subscription routes will be added here
+        // Subscription routes
+        Route::prefix('subscriptions')->group(function () {
+            Route::get('/plans', [SubscriptionController::class, 'plans'])->name('api.v1.subscriptions.plans');
+            Route::get('/stripe-plans', [SubscriptionController::class, 'stripePlans'])->name('api.v1.subscriptions.stripe-plans');
+            Route::get('/current', [SubscriptionController::class, 'current'])->name('api.v1.subscriptions.current');
+            Route::post('/setup-intent', [SubscriptionController::class, 'setupIntent'])->name('api.v1.subscriptions.setup-intent');
+            Route::post('/subscribe', [SubscriptionController::class, 'subscribe'])->name('api.v1.subscriptions.subscribe');
+            Route::put('/update-plan', [SubscriptionController::class, 'updatePlan'])->name('api.v1.subscriptions.update-plan');
+            Route::post('/cancel', [SubscriptionController::class, 'cancel'])->name('api.v1.subscriptions.cancel');
+            Route::post('/resume', [SubscriptionController::class, 'resume'])->name('api.v1.subscriptions.resume');
+        });
     });
 });
