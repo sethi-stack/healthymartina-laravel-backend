@@ -4,6 +4,48 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Look & feel customizations
+    |--------------------------------------------------------------------------
+    |
+    | Make it yours.
+    |
+    */
+
+    // Project name. Shown in the breadcrumbs and a few other places.
+    'project_name' => 'App Healthy Martina',
+
+    // Menu logos
+    'logo_lg'   => '<b>Healthy</b>Martina',
+    'logo_mini' => '<b>H</b>M',
+
+    // Developer or company name. Shown in footer.
+    'developer_name' => 'Braigo',
+
+    // Developer website. Link in footer.
+    'developer_link' => 'http://braigo.mx',
+
+    // Show powered by Laravel Backpack in the footer?
+    'show_powered_by' => false,
+
+    // The AdminLTE skin. Affects menu color and primary/secondary colors used throughout the application.
+    'skin' => 'skin-yellow',
+    // Options: skin-black, skin-blue, skin-purple, skin-red, skin-yellow, skin-green, skin-blue-light, skin-black-light, skin-purple-light, skin-green-light, skin-red-light, skin-yellow-light
+
+    // Date & Datetime Format Syntax: https://carbon.nesbot.com/docs/#api-localization
+    'default_date_format'     => 'D MMM YYYY',
+    'default_datetime_format' => 'D MMM YYYY, HH:mm',
+
+    // Content of the HTML meta robots tag to prevent indexing and link following
+    'meta_robots_content' => 'noindex, nofollow',
+
+    // Overlays - CSS files that change the look and feel of the admin panel
+    'overlays' => [
+        'vendor/backpack/base/backpack.bold.css',
+        'vendor/backpack/base/backpack.content.is.king.css',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Registration Open
     |--------------------------------------------------------------------------
     |

@@ -25,4 +25,16 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             return $request->expectsJson();
         });
+        
+        // Enable detailed error reporting for debugging
+        $exceptions->render(function (Throwable $e, $request) {
+            if ($request->is('admin/*') && config('app.debug')) {
+                // Log the error for debugging
+                \Log::error('Admin route error: ' . $e->getMessage(), [
+                    'exception' => $e,
+                    'url' => $request->url(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        });
     })->create();
