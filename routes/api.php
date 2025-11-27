@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Recipes\RecipeController;
 use App\Http\Controllers\Api\V1\Calendars\CalendarController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
+use App\Http\Controllers\Api\V1\Ingredients\IngredientController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +39,13 @@ Route::prefix('v1')->group(function () {
             Route::get('/', [RecipeController::class, 'index'])->name('api.v1.recipes.index');
             Route::get('/search', [RecipeController::class, 'search'])->name('api.v1.recipes.search');
             Route::get('/{slug}', [RecipeController::class, 'show'])->name('api.v1.recipes.show');
+        });
+
+        // Ingredient routes
+        Route::prefix('ingredients')->group(function () {
+            Route::get('/', [IngredientController::class, 'index'])->name('api.v1.ingredients.index');
+            Route::get('/{id}', [IngredientController::class, 'show'])->name('api.v1.ingredients.show');
+            Route::get('/{id}/instrucciones', [IngredientController::class, 'instrucciones'])->name('api.v1.ingredients.instrucciones');
         });
         
         // Calendar routes
