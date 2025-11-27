@@ -1,0 +1,158 @@
+<?php
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+ */
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Auth::routes();
+// Auth::routes(['verify' => true]);
+// Route::get('/email/verify/{id}/{hash}', 'VerificationController@verify')->name('verification.verify');
+Route::get('/optimize', 'TestingController@optimize');
+Route::get('/migrate', 'TestingController@migrate');
+Route::get('/remove-parenthesis', 'TestingController@removeParenthesis');
+Route::get('/remove-parenthesis-2', 'TestingController@removeParenthesis2');
+Route::get('/test-mailchimp', 'TestingController@testMailchimp');
+Route::get('/notify-comment', 'TestingController@notifyComment');
+Route::get('/notify-reset', 'TestingController@notifyResetPasswowrd');
+Route::get('/dd', 'TestingController@dd');
+Route::get('/uppercase', 'TestingController@addUppercase');
+
+Route::get('/custom-logout', 'BaseController@logout')->name('custom-logout');
+
+// Route::get('/admin/Recetas/ingrediente-medida/{ing}', 'RecetasController@ingredienteMedida');
+Route::get('comment/ajax-recipe', 'Admin\CommentCrudController@recipeOptions');
+
+Route::post('/bookmark/save', 'RecetasController@saveBookmark')->name('bookmark.save');
+Route::post('/bookmark/get-filter', 'RecetasController@getBookmark')->name('bookmark.use');
+
+Route::get('/registro', 'ClienteController@getRegistro')->name('admin.registro');
+Route::post('/registro', 'ClienteController@postRegistro');
+
+Route::get('/login', 'ClienteController@getLogin')->name('login');
+Route::post('/login', 'ClienteController@postLogin');
+
+Route::get('/logout', 'ClienteController@logout')->middleware('auth');
+
+Route::get('/api/ingrediente', 'Api\IngredienteController@index');
+Route::get('/api/ingrediente/{id}', 'Api\IngredienteController@show');
+Route::get('/api/ingrediente/instruccion/{id}', 'Api\IngredienteController@instruccion');
+
+Route::get('/api/receta', 'Api\RecetaController@index');
+Route::get('/api/receta', 'Api\RecetaController@index');
+Route::get('/api/receta/{id}', 'Api\RecetaController@show');
+// Route::get('/receta/adjust', 'RecetasController@adjustSubrecetas');
+Route::get('recetasAlgolia', 'RecetasController@recetasAlgolia');
+
+// Legal
+Route::get('/terminos-condiciones', 'LegalDocsController@showTerms')->name('legal.show.terms');
+Route::get('/aviso-de-privacidad', 'LegalDocsController@showPrivacyNotice')->name('legal.show.privacy');
+
+Route::post('/stripe/webhook', '\App\Http\Controllers\WebhookController@handleWebhook');
+
+//coupon
+Route::post('/checkCoupon', 'UserController@checkCoupon')->name('check.coupon');
+
+// User
+Route::post('/order-post', 'UserController@orderPost')->name('user.orderPost');
+
+// Route::group(['middleware' => ['role']], function () {
+    Route::get('/', 'RecetasController@recetas')->middleware(['auth']);
+    Route::get('/infoNutri', 'RecetasController@pruebaNutrimental');
+    Route::get('/recetario', 'RecetasController@recetario')->middleware('auth')->name('recetario.show');
+    Route::post('/recetario/filter', 'RecetasController@recetario')->middleware('auth')->name('recetario.show.filter');
+    Route::get('/recetario/filter', 'RecetasController@recetario')->middleware('auth');
+
+    Route::get('/calendario', 'CalendarController@calendarioPlanificador')->name('calendar.view')->middleware('auth');
+    Route::post('/calendario/create', 'CalendarController@create')->name('calendar.create')->middleware('auth');
+    Route::post('/calendario/copy/{id}', 'CalendarController@copy')->name('calendar.copy')->middleware('auth');
+    Route::post('/calendario/racion/update', 'CalendarController@updateRacion')->name('calendar.racion')->middleware('auth');
+    
+    Route::post('/calendario/viewUpdateCalendario', 'CalendarController@viewUpdateCalendario')->name('calendar.viewUpdateCalendario')->middleware('auth');
+
+    Route::get('/getCalenderModal', 'CalendarController@getCalenderModal')->name('calendar.getCalenderModal');
+    Route::get('/calendario/nutinfo/{id}', 'CalendarController@getNutritionInfo')->name('calendar.nutritionalInfo')->middleware('auth');
+
+    Route::post('/calendario/edit/{id}', 'CalendarController@update')->name('calendar.update')->middleware('auth');
+    Route::post('/calendario/delete/{id}', 'CalendarController@delete')->name('calendar.delete')->middleware('auth');
+    Route::post('/calendario/{id}/add-recipe', 'CalendarController@addRecipe')->name('calendar.add_recipe')->middleware('auth');
+    Route::post('/calendario/{id}/update-recipe', 'CalendarController@updateRecipe')->name('calendar.update_recipe')->middleware('auth');
+    Route::post('/calendario/{id}/remove-recipe', 'CalendarController@removeRecipe')->name('calendar.remove_recipe')->middleware('auth');
+    Route::post('/calendario/{id}/leftover-recipe', 'CalendarController@leftoverRecipe')->name('calendar.leftover_recipe')->middleware('auth');
+    Route::post('/calendario/add-recipe-calender', 'CalendarController@addRecipecalender')->name('calendar.add_recipe_calender')->middleware('auth');
+    Route::post('/calendario/check-days', 'CalendarController@checkDayscalender')->name('calendar.check_days')->middleware('auth');
+    Route::post('/calendario/updateLabels/{id}', 'CalendarController@updateLabels')->name('calendar.updateLabels')->middleware('auth');
+    Route::post('/calendario/calendarioPdf', 'CalendarController@calendarioPdf')->name('calendar.calendarioPdf')->middleware('auth');
+
+    Route::get('/listas', 'RecetasController@calendarioLista')->middleware('auth')->name('calender.listas');
+    Route::post('/Updatelistas', 'RecetasController@calendarioUpdateLista')->middleware('auth')->name('calender.Updatelistas');
+    Route::post('/UpdatelistasIngredients/{id}', 'RecetasController@UpdatelistasIngredients')->middleware('auth')->name('calender.UpdatelistasIngredients');
+    Route::get('/deletelistasIngredients/{id}', 'RecetasController@deletelistasIngredients')->middleware('auth')->name('calender.deletelistasIngredients');
+    Route::post('/ListaPdf', 'RecetasController@calendarioListaPdf')->middleware('auth')->name('calender.ListaPdf');
+    Route::get('/ListaEmail', 'RecetasController@ListaEmail')->middleware('auth')->name('calender.ListaEmail');
+    Route::get('/ListaRender/{id}', 'RecetasController@ListaRender')->middleware('auth')->name('calender.ListaRender');
+    Route::get('/ListaRenderAll', 'RecetasController@ListaRenderAll')->middleware('auth')->name('calender.ListaRenderAll');
+    
+    Route::post('/listaIngredientes', 'RecetasController@listaIngredientes')->middleware('auth')->name('calender.listaIngredientes');
+    Route::get('/planes', 'RecetasController@planes')->middleware('auth');
+    Route::get('/planes/{id}', 'RecetasController@planesCalendario')->name('planes.calendario')->middleware('auth');
+    Route::post('/planes/copy/{id}', 'RecetasController@copyPlanes')->name('planes.copy')->middleware('auth');
+    Route::get('/planesPdf', 'RecetasController@planesPdf')->name('planes.calendarioPdf')->middleware('auth');
+    Route::get('/mis-planes', 'RecetasController@misPlanes')->middleware('auth');
+    Route::get('/mi-recetario', 'RecetasController@miRecetario')->middleware('auth');
+
+    Route::get('/receta', 'RecetasController@receta')->middleware('auth');
+    Route::get('/receta/test/{slug}', 'RecetasController@testNutriente')->middleware('auth');
+    Route::get('/receta/saveJson', 'RecetasController@saveJson')->middleware('auth');
+    Route::get('/receta/{slug}', 'RecetasController@receta_vista')->middleware('auth')->name('receta.show');
+    Route::get('/receta/reaction/{recipe_id}/{reaction}', 'RecetasController@reaction')->name('receta.reaction');
+    Route::post('/receta/comment', 'RecetasController@comment')->name('receta.comment');
+    Route::get('/receta/delete-comment/{comment_id}', 'RecetasController@deleteComment')->name('receta.delete.comment');
+    Route::post('/pdf/receta/{recipe_id}', 'RecetasController@pdf')->name('pdf.recipe');
+    Route::post('/pdf/receta-sendpdf/{recipe_id}','RecetasController@sendPdfMail')->name('sendpdf.recipe');
+    Route::get('/perfil', 'UserController@show')->name('user.show');
+    Route::post('/perfil-save-changes', 'UserController@update')->name('user.update');
+    Route::post('/perfil-photo-save-changes', 'UserController@updatePhoto')->name('user.photo.update');
+    Route::get('/preferencias', 'UserController@preferences')->name('user.preferences');
+    Route::get('/empresa', 'UserController@business')->name('user.business');
+    Route::get('/business-delete-photo', 'UserController@deletePhotobusiness')->name('business.photo.delete');
+    Route::post('/empresa-save-changes', 'UserController@businessUpdate')->name('business.update');
+    Route::post('/empresa-photo-save-changes', 'UserController@updatePhotobusiness')->name('business.photo.update');
+    Route::get('/membresia/{id}', 'UserController@membresia')->name('user.modernizar');
+
+    Route::post('/update-subscription', 'UserController@updateSubscription')->name('user.updateSubscription');
+    Route::post('/update-card', 'UserController@updateCard')->name('user.updateCard');
+    Route::get('/upgrade', 'UserController@upgrade')->name('user.upgrade');
+    Route::get('/recibos', 'UserController@recibos')->name('user.recibos');
+    Route::get('/update-wizard-progress/{type}', 'UserController@updateSetupWizardProgress');
+    Route::post('/preferencias-update', 'UserController@updatePreferences')->name('user.preferences.update');
+    Route::post('/pass-update', 'UserController@passwordUpdate')->name('user.password.update');
+    Route::get('/delete-photo', 'UserController@deletePhoto')->name('user.photo.delete');
+    Route::get('/subscription/create', ['as' => 'home', 'uses' => 'SubscriptionController@index'])->name('subscription.create');
+    Route::get('/user/invoice/{product}/{id}', 'UserController@downloadInvoice')->name('user.downloadInvoice');
+    Route::get('/subscription/updateCoupon', 'UserController@updateCoupon')->name('subscription.updateCoupon');
+
+    Route::post('/subscription/cancel', 'UserController@cancelSubscription')->name('user.cancelSubscription');
+
+    //snippet
+    Route::post('/snippet/create', 'UserController@createSnippet')->name('snippet.create')->middleware('auth');
+    Route::post('/snippet/update/{id}', 'UserController@updateSnippet')->name('snippet.update')->middleware('auth');
+    Route::post('/snippet/delete/{id}', 'UserController@deleteSnippet')->name('snippet.delete')->middleware('auth');
+    Route::get('/calendario-view', 'CalendarController@calendarioPlanificadorVue')->middleware('auth');
+    Route::get('/calendario-schedule', 'RecetasController@getCalendarScheduleJson')->middleware('auth');
+    // Route::get('/calendario-view', 'calendario-planner')->middleware('auth');
+    // Route::get('export-intermediate-message','UserController@ajaxIntermediateMessage')->name('export.intermediate_message')->middleware('auth');
+
+// });
+Route::get('/membresia', 'UserController@membresia')->name('user.membresia')->middleware('verified');
+Route::get('/setDefaultMembresia', 'UserController@setDefaultMembresia')->name('user.setDefaultMembresia');
+//Route::post('order-post', ['as'=>'order-post','uses'=>'SubscriptionController@orderPost']);
