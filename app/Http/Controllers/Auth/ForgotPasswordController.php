@@ -19,24 +19,4 @@ class ForgotPasswordController extends Controller
     */
 
     use SendsPasswordResetEmails;
-
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->middleware('guest');
-    }
-
-    /* Get the response for a successful password reset link.
-     *
-     * @param  string  $response
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function sendResetLinkResponse($response)
-    {
-        return redirect()->back()->with('status', 'Correo enviado');
-    }
 }
