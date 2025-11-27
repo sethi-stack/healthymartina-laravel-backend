@@ -3,6 +3,18 @@
 @basset('https://cdn.jsdelivr.net/npm/noty@3.2.0-beta-deprecated/lib/noty.min.js')
 @basset('https://cdn.jsdelivr.net/npm/sweetalert@2.1.2/dist/sweetalert.min.js')
 
+{{-- CSRF Token Setup for AJAX --}}
+<script>
+// Ajax calls should always have the CSRF token attached to them, otherwise they won't work
+if (typeof $ !== 'undefined') {
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+}
+</script>
+
 @if (backpack_theme_config('scripts') && count(backpack_theme_config('scripts')))
     @foreach (backpack_theme_config('scripts') as $path)
         @if(is_array($path))
@@ -23,12 +35,8 @@
     @vite(backpack_theme_config('vite_scripts'))
 @endif
 
-@include(backpack_view('inc.alerts'))
+@yield('before_scripts')
+@stack('before_scripts')
 
-@if(config('app.debug'))
-    @include('crud::inc.ajax_error_frame')
-@endif
-
-@push('after_scripts')
-    @basset(base_path('vendor/backpack/crud/src/resources/assets/js/common.js'))
-@endpush
+@yield('after_scripts')
+@stack('after_scripts')
