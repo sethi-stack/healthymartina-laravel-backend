@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Recipes\RecipeController;
+use App\Http\Controllers\Api\V1\Recipes\CommentController;
+use App\Http\Controllers\Api\V1\Recipes\PdfController as RecipePdfController;
 use App\Http\Controllers\Api\V1\Calendars\CalendarController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
 use App\Http\Controllers\Api\V1\Ingredients\IngredientController;
@@ -41,11 +43,24 @@ Route::prefix('v1')->group(function () {
             Route::get('/search', [RecipeController::class, 'search'])->name('api.v1.recipes.search');
             Route::get('/popular', [RecipeController::class, 'popular'])->name('api.v1.recipes.popular');
             Route::get('/bookmarks', [RecipeController::class, 'bookmarks'])->name('api.v1.recipes.bookmarks');
-            Route::get('/{id}/similar', [RecipeController::class, 'similar'])->name('api.v1.recipes.similar');
-            Route::get('/{id}/stats', [RecipeController::class, 'stats'])->name('api.v1.recipes.stats');
-            Route::post('/{id}/bookmark', [RecipeController::class, 'toggleBookmark'])->name('api.v1.recipes.bookmark');
-            Route::post('/{id}/react', [RecipeController::class, 'react'])->name('api.v1.recipes.react');
-            Route::delete('/{id}/react', [RecipeController::class, 'removeReaction'])->name('api.v1.recipes.react.remove');
+            
+            // Recipe by ID routes (must come before {slug})
+            Route::get('/{id}/similar', [RecipeController::class, 'similar'])->where('id', '[0-9]+')->name('api.v1.recipes.similar');
+            Route::get('/{id}/stats', [RecipeController::class, 'stats'])->where('id', '[0-9]+')->name('api.v1.recipes.stats');
+            Route::post('/{id}/bookmark', [RecipeController::class, 'toggleBookmark'])->where('id', '[0-9]+')->name('api.v1.recipes.bookmark');
+            Route::post('/{id}/react', [RecipeController::class, 'react'])->where('id', '[0-9]+')->name('api.v1.recipes.react');
+            Route::delete('/{id}/react', [RecipeController::class, 'removeReaction'])->where('id', '[0-9]+')->name('api.v1.recipes.react.remove');
+            
+            // Comments
+            Route::get('/{id}/comments', [CommentController::class, 'index'])->where('id', '[0-9]+')->name('api.v1.recipes.comments.index');
+            Route::post('/{id}/comments', [CommentController::class, 'store'])->where('id', '[0-9]+')->name('api.v1.recipes.comments.store');
+            Route::delete('/comments/{commentId}', [CommentController::class, 'destroy'])->name('api.v1.recipes.comments.destroy');
+            
+            // PDF Export
+            Route::get('/{id}/pdf', [RecipePdfController::class, 'download'])->where('id', '[0-9]+')->name('api.v1.recipes.pdf');
+            Route::post('/{id}/pdf/email', [RecipePdfController::class, 'email'])->where('id', '[0-9]+')->name('api.v1.recipes.pdf.email');
+            
+            // Recipe by slug (must be last)
             Route::get('/{slug}', [RecipeController::class, 'show'])->name('api.v1.recipes.show');
         });
 
