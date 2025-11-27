@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\Recipes\RecipeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,7 +31,12 @@ Route::prefix('v1')->group(function () {
             })->name('api.v1.auth.user');
         });
 
-        // Recipe routes will be added here
+        // Recipe routes
+        Route::prefix('recipes')->group(function () {
+            Route::get('/', [RecipeController::class, 'index'])->name('api.v1.recipes.index');
+            Route::get('/search', [RecipeController::class, 'search'])->name('api.v1.recipes.search');
+            Route::get('/{slug}', [RecipeController::class, 'show'])->name('api.v1.recipes.show');
+        });
         
         // Calendar routes will be added here
         
