@@ -39,6 +39,13 @@ Route::prefix('v1')->group(function () {
         Route::prefix('recipes')->group(function () {
             Route::get('/', [RecipeController::class, 'index'])->name('api.v1.recipes.index');
             Route::get('/search', [RecipeController::class, 'search'])->name('api.v1.recipes.search');
+            Route::get('/popular', [RecipeController::class, 'popular'])->name('api.v1.recipes.popular');
+            Route::get('/bookmarks', [RecipeController::class, 'bookmarks'])->name('api.v1.recipes.bookmarks');
+            Route::get('/{id}/similar', [RecipeController::class, 'similar'])->name('api.v1.recipes.similar');
+            Route::get('/{id}/stats', [RecipeController::class, 'stats'])->name('api.v1.recipes.stats');
+            Route::post('/{id}/bookmark', [RecipeController::class, 'toggleBookmark'])->name('api.v1.recipes.bookmark');
+            Route::post('/{id}/react', [RecipeController::class, 'react'])->name('api.v1.recipes.react');
+            Route::delete('/{id}/react', [RecipeController::class, 'removeReaction'])->name('api.v1.recipes.react.remove');
             Route::get('/{slug}', [RecipeController::class, 'show'])->name('api.v1.recipes.show');
         });
 
