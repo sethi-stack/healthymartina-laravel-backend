@@ -85,6 +85,11 @@ class User extends Authenticatable
         return $this->hasOne('App\Models\NotificationPreference', 'user_id');
     }
 
+    public function calendars()
+    {
+        return $this->hasMany('App\Models\Calendar', 'user_id');
+    }
+
     public function hasReacted($recipe_id, $reaction)
     {
         return Reaction::whereRecipeId($recipe_id)->whereUserId($this->id)->whereIsLike($reaction)->first() ? true : false;

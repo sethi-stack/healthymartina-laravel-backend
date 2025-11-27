@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Recipes\RecipeController;
+use App\Http\Controllers\Api\V1\Calendars\CalendarController;
+use App\Http\Controllers\Api\V1\User\ProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,9 +40,24 @@ Route::prefix('v1')->group(function () {
             Route::get('/{slug}', [RecipeController::class, 'show'])->name('api.v1.recipes.show');
         });
         
-        // Calendar routes will be added here
+        // Calendar routes
+        Route::prefix('calendars')->group(function () {
+            Route::get('/', [CalendarController::class, 'index'])->name('api.v1.calendars.index');
+            Route::post('/', [CalendarController::class, 'store'])->name('api.v1.calendars.store');
+            Route::get('/{id}', [CalendarController::class, 'show'])->name('api.v1.calendars.show');
+            Route::put('/{id}', [CalendarController::class, 'update'])->name('api.v1.calendars.update');
+            Route::delete('/{id}', [CalendarController::class, 'destroy'])->name('api.v1.calendars.destroy');
+            Route::post('/{id}/copy', [CalendarController::class, 'copy'])->name('api.v1.calendars.copy');
+        });
         
-        // User routes will be added here
+        // User Profile routes
+        Route::prefix('profile')->group(function () {
+            Route::get('/', [ProfileController::class, 'show'])->name('api.v1.profile.show');
+            Route::put('/', [ProfileController::class, 'update'])->name('api.v1.profile.update');
+            Route::put('/password', [ProfileController::class, 'updatePassword'])->name('api.v1.profile.password');
+            Route::post('/photo', [ProfileController::class, 'uploadPhoto'])->name('api.v1.profile.photo');
+            Route::delete('/', [ProfileController::class, 'destroy'])->name('api.v1.profile.destroy');
+        });
         
         // Subscription routes will be added here
     });
