@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Backpack\CRUD\CrudTrait;
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Cviebrock\EloquentSluggable\Sluggable;
 
@@ -34,7 +34,7 @@ class Plan extends Model
     |--------------------------------------------------------------------------
     */
 
-    public function sluggable()
+    public function sluggable(): array
     {
         return [
             'slug' => [

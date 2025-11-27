@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Backpack\CRUD\CrudTrait;
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use PhpUnitsOfMeasure\PhysicalQuantity\Volume;
 
 class RecetaInstruccionReceta extends Model

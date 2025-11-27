@@ -23,7 +23,7 @@ class User extends Authenticatable
     use CrudTrait;
     use HasApiTokens; // For API authentication
     
-    public function sluggable()
+    public function sluggable(): array
     {
         return [
             'slug' => [

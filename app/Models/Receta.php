@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Models\Nutriente;
 use Arr;
-use Backpack\CRUD\CrudTrait;
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -51,7 +51,7 @@ class Receta extends Model
     |--------------------------------------------------------------------------
      */
 
-    public function sluggable()
+    public function sluggable(): array
     {
         return [
             'slug' => [

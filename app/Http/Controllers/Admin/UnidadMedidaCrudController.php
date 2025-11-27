@@ -3,97 +3,68 @@
 namespace App\Http\Controllers\Admin;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
+use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 // VALIDATION: change the requests to match your own file names if you need form validation
 use App\Http\Requests\UnidadMedidaRequest as StoreRequest;
 use App\Http\Requests\UnidadMedidaRequest as UpdateRequest;
-use Backpack\CRUD\CrudPanel;
 
 /**
  * Class UnidadMedidaCrudController
  * @package App\Http\Controllers\Admin
- * @property-read CrudPanel $crud
+ * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
 class UnidadMedidaCrudController extends CrudController
 {
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+
+    /**
+     * Configure the CrudPanel object. Apply settings to all operations.
+     * 
+     * @return void
+     */
     public function setup()
     {
-        /*
-        |--------------------------------------------------------------------------
-        | CrudPanel Basic Information
-        |--------------------------------------------------------------------------
-        */
-        $this->crud->setModel('App\Models\UnidadMedida');
-        $this->crud->setRoute(config('backpack.base.route_prefix') . '/UnidadesMedida');
-        $this->crud->setEntityNameStrings('unidad de medida', 'unidades de medida');
-
-        /*
-        |--------------------------------------------------------------------------
-        | CrudPanel Configuration
-        |--------------------------------------------------------------------------
-        */
-
-        // TODO: remove setFromDb() and manually define Fields and Columns
-        //$this->crud->setFromDb();
-        $this->crud->addColumn([
-            'name' => 'nombre',
-            'label' => 'Unidad de medida',
-        ]);
-
-        $this->crud->addColumn([
-            'name' => 'abreviatura',
-            'label' => 'Abreviatura',
-        ]);
-
-        $this->crud->addColumn([
-            'name' => 'equivalencia',
-            'label' => 'Equivalencia',
-        ]);
-
-        $this->crud->addField([
-          'name' => 'nombre',
-          'label' => 'Unidad de medida',
-          'wrapperAttributes' => [
-            'class' => 'form-group col-md-4'
-          ],
-        ]);
-
-        $this->crud->addField([
-          'name' => 'abreviatura',
-          'label' => 'Abreviatura',
-          'wrapperAttributes' => [
-            'class' => 'form-group col-md-4'
-          ],
-        ]);
-
-        $this->crud->addField([
-          'name' => 'equivalencia',
-          'label' => 'Equivalencia',
-          'wrapperAttributes' => [
-            'class' => 'form-group col-md-4'
-          ],
-        ]);
-
-        // add asterisk for fields that are required in UnidadMedidaRequest
-        $this->crud->setRequiredFields(StoreRequest::class, 'create');
-        $this->crud->setRequiredFields(UpdateRequest::class, 'edit');
+        CRUD::setModel(\App\Models\UnidadMedida::class);
+        CRUD::setRoute(config("backpack.base.route_prefix") . "/UnidadesMedida");
+        CRUD::setEntityNameStrings("unidad de medida", "unidades de medida");
     }
 
-    public function store(StoreRequest $request)
+    /**
+     * Define what happens when the List operation is loaded.
+     * 
+     * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
+     * @return void
+     */
+    protected function setupListOperation()
     {
-        // your additional operations before save here
-        $redirect_location = parent::storeCrud($request);
-        // your additional operations after save here
-        // use $this->data['entry'] or $this->crud->entry
-        return $redirect_location;
+        CRUD::setFromDb(); // set columns from db columns.
     }
 
-    public function update(UpdateRequest $request)
+    /**
+     * Define what happens when the Create operation is loaded.
+     * 
+     * @see https://backpackforlaravel.com/docs/crud-operation-create
+     * @return void
+     */
+    protected function setupCreateOperation()
     {
-        // your additional operations before save here
-        $redirect_location = parent::updateCrud($request);
-        // your additional operations after save here
-        // use $this->data['entry'] or $this->crud->entry
-        return $redirect_location;
+        CRUD::setValidation(StoreRequest::class);
+        CRUD::setFromDb(); // set fields from db columns.
+    }
+
+    /**
+     * Define what happens when the Update operation is loaded.
+     * 
+     * @see https://backpackforlaravel.com/docs/crud-operation-update
+     * @return void
+     */
+    protected function setupUpdateOperation()
+    {
+        $this->setupCreateOperation();
     }
 }
