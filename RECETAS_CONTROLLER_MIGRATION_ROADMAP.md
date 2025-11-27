@@ -363,14 +363,14 @@ $query->where('nutrient_info->' . $nutrienteId . '->cantidad', '>=', $minValue);
 
 ## 📊 Estimated Timeline
 
-| Phase            | Methods | Complexity | Days          |
-| ---------------- | ------- | ---------- | ------------- |
-| Lista (Ingredient Lists) | 9 | High | 2-3 |
-| Meal Plans       | 5       | High       | 2             |
-| Advanced Filters | 1       | Very High  | 3-4           |
-| Filter Bookmarks | 3       | Medium     | 1             |
-| Utilities        | 6       | Low        | 1             |
-| **TOTAL**        | **24**  | -          | **9-11 days** |
+| Phase                    | Methods | Complexity | Days          |
+| ------------------------ | ------- | ---------- | ------------- |
+| Lista (Ingredient Lists) | 9       | High       | 2-3           |
+| Meal Plans               | 5       | High       | 2             |
+| Advanced Filters         | 1       | Very High  | 3-4           |
+| Filter Bookmarks         | 3       | Medium     | 1             |
+| Utilities                | 6       | Low        | 1             |
+| **TOTAL**                | **24**  | -          | **9-11 days** |
 
 ---
 

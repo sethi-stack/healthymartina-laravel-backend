@@ -2,6 +2,8 @@
 
 Modern Laravel 11 API backend for the Healthy Martina application.
 
+**Current Status:** 57 API endpoints | Phase 1 Complete ✅
+
 ## Architecture
 
 This is a **modern, feature-based Laravel API** following clean architecture principles with:
@@ -14,6 +16,21 @@ This is a **modern, feature-based Laravel API** following clean architecture pri
 -   **Form Requests** - Input validation
 -   **API Resources** - Response transformation
 -   **DTOs** - Data transfer objects
+
+## Migration Progress
+
+### ✅ Phase 1 Complete: Lista de Ingredientes
+
+-   **9 endpoints** for calendar ingredient lists
+-   PDF export with theme support
+-   Email functionality
+-   Custom ingredient management
+-   **Status:** Production ready
+-   **Documentation:** `LISTA_INGREDIENTES_API.md`
+
+### 📝 Next: Phase 2 - Meal Plans
+
+See `CONTINUE_FROM_HERE.md` for roadmap
 
 ## Directory Structure
 

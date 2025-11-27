@@ -115,5 +115,25 @@ class CalendarController extends Controller
             'message' => 'Calendar copied successfully',
         ], 201);
     }
+
+    /**
+     * Get calendar schedules as JSON (replaces getCalendarScheduleJson method).
+     */
+    public function schedules(): JsonResponse
+    {
+        $calendars = Calendar::select('id', 'main_schedule', 'sides_schedule')
+            ->where('user_id', Auth::id())
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        $data = [];
+        foreach ($calendars as $calendar) {
+            $data[$calendar->id] = $calendar;
+        }
+
+        return response()->json([
+            'data' => $data,
+        ]);
+    }
 }
 

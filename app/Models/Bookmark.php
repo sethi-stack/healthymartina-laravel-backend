@@ -21,9 +21,12 @@ class Bookmark extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    // protected $fillable = [];
+    protected $fillable = ['user_id', 'filters', 'name'];
     // protected $hidden = [];
     // protected $dates = [];
+    protected $casts = [
+        'filters' => 'array',
+    ];
 
     /*
     |--------------------------------------------------------------------------
@@ -39,7 +42,7 @@ class Bookmark extends Model
 
     public function user()
     {
-        return $this->hasOne('App\User');
+        return $this->belongsTo('App\Models\User');
     }
 
     /*

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Recipe\RecipeResource;
 use App\Models\Receta;
 use App\Services\RecipeService;
+use App\Services\RecipeFilterService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -13,10 +14,12 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class RecipeController extends Controller
 {
     protected RecipeService $recipeService;
+    protected RecipeFilterService $filterService;
 
-    public function __construct(RecipeService $recipeService)
+    public function __construct(RecipeService $recipeService, RecipeFilterService $filterService)
     {
         $this->recipeService = $recipeService;
+        $this->filterService = $filterService;
     }
 
     /**
@@ -139,6 +142,91 @@ class RecipeController extends Controller
         
         $recipes = $this->recipeService->getPopularRecipes($limit, $days);
         return RecipeResource::collection($recipes);
+    }
+
+    /**
+     * Advanced recipe filtering with complex logic (replaces recetario() method).
+     */
+    public function advancedFilter(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'tags' => 'sometimes|array',
+            'tags.*' => 'integer|exists:tags,id',
+            'ingrediente_incluir' => 'sometimes|array',
+            'ingrediente_incluir.*' => 'integer|exists:ingredientes,id',
+            'ingrediente_excluir' => 'sometimes|array',
+            'ingrediente_excluir.*' => 'integer|exists:ingredientes,id',
+            'num_ingredientes' => 'sometimes|array',
+            'num_ingredientes.min' => 'integer|min:0|max:10',
+            'num_ingredientes.max' => 'integer|min:0|max:10',
+            'num_tiempo' => 'sometimes|array',
+            'num_tiempo.min' => 'integer|min:0|max:60',
+            'num_tiempo.max' => 'integer|min:0|max:60',
+            'calorias' => 'sometimes|array',
+            'calorias.min' => 'integer|min:0|max:900',
+            'calorias.max' => 'integer|min:0|max:900',
+            'nutrientes' => 'sometimes|array',
+            'nutrientes.*.min' => 'numeric|min:0',
+            'nutrientes.*.max' => 'numeric|min:0',
+            'page' => 'sometimes|integer|min:1',
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        // Get filtered recipes using the advanced filter service
+        $recipes = $this->filterService->getAdvancedFilteredRecipes($validated);
+
+        // Paginate results
+        $currentPage = $request->get('page', 1);
+        $perPage = $request->get('per_page', 27);
+        $paginatedResults = $this->filterService->paginateCollection($recipes, $perPage, $currentPage);
+
+        // Transform to resources
+        $resourceCollection = RecipeResource::collection($paginatedResults['data']);
+
+        return response()->json([
+            'data' => $resourceCollection,
+            'meta' => [
+                'current_page' => $paginatedResults['current_page'],
+                'per_page' => $paginatedResults['per_page'],
+                'total' => $paginatedResults['total'],
+                'last_page' => $paginatedResults['last_page'],
+                'from' => $paginatedResults['from'],
+                'to' => $paginatedResults['to'],
+                'has_more_pages' => $paginatedResults['has_more_pages'],
+            ],
+            'filters_applied' => $validated,
+            'total_filtered' => $paginatedResults['total'],
+        ]);
+    }
+
+    /**
+     * Get filter metadata for advanced filtering.
+     */
+    public function filterMetadata(): JsonResponse
+    {
+        $metadata = $this->filterService->getFilterMetadata();
+        return response()->json($metadata);
+    }
+
+    /**
+     * Track recipe view (for analytics).
+     */
+    public function trackView(int $id): JsonResponse
+    {
+        $recipe = Receta::findOrFail($id);
+        
+        // Here you could implement view tracking logic
+        // For now, we'll just return success
+        // In a real implementation, you might:
+        // - Log to analytics service
+        // - Increment view counter
+        // - Track user viewing patterns
+        
+        return response()->json([
+            'message' => 'View tracked',
+            'recipe_id' => $recipe->id,
+            'recipe_title' => $recipe->titulo,
+        ]);
     }
 }
 

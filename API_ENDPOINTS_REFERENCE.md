@@ -100,7 +100,7 @@ Logout and revoke current token.
 
 ---
 
-## 🍽️ Recipes (10 endpoints)
+## 🍽️ Recipes (13 endpoints)
 
 ### GET `/recipes`🔒
 
@@ -244,6 +244,97 @@ Remove reaction from recipe.
 
 ---
 
+### POST `/recipes/advanced-filter` 🔒
+
+**🔥 NEW: Advanced recipe filtering with complex logic**
+
+Apply comprehensive filtering with 30+ nutrients, ingredient inclusion/exclusion, subrecipe logic, and more.
+
+**Body:**
+
+```json
+{
+  "tags": [1, 2, 3],
+  "ingrediente_incluir": [10, 15, 20],
+  "ingrediente_excluir": [5, 8],
+  "num_ingredientes": {"min": 2, "max": 8},
+  "num_tiempo": {"min": 10, "max": 45},
+  "calorias": {"min": 100, "max": 500},
+  "nutrientes": {
+    "1005": {"min": 10, "max": 100},
+    "1079": {"min": 5, "max": 25}
+  },
+  "page": 1,
+  "per_page": 27
+}
+```
+
+**Features:**
+- Tag filtering (AND logic)
+- Ingredient inclusion (ALL must be present)
+- Ingredient exclusion (including subrecipes)
+- Nutrient filtering (30+ nutrients with JSON queries)
+- Cooking time and ingredient count filters
+- Subrecipe parent/child logic
+
+---
+
+### GET `/recipes/filter-metadata` 🔒
+
+**🔥 NEW: Get filter metadata**
+
+Get all available filter options and default values for advanced filtering.
+
+**Response:** Tags, ingredients, nutrient types, and default filter ranges.
+
+---
+
+### POST `/recipes/{id}/track-view` 🔒
+
+**🔥 NEW: Track recipe view**
+
+Track when a user views a recipe for analytics.
+
+---
+
+## 🔖 Filter Bookmarks (7 endpoints)
+
+### GET `/filters/bookmarks` 🔒
+
+**🔥 NEW: Get saved filter bookmarks**
+
+List all user's saved filter configurations.
+
+### POST `/filters/bookmarks` 🔒
+
+**🔥 NEW: Save filter bookmark**
+
+Save current filter state as a named bookmark.
+
+### GET `/filters/bookmarks/{id}` 🔒
+
+**🔥 NEW: Get specific bookmark**
+
+### PUT `/filters/bookmarks/{id}` 🔒
+
+**🔥 NEW: Update bookmark**
+
+### DELETE `/filters/bookmarks/{id}` 🔒
+
+**🔥 NEW: Delete bookmark**
+
+### DELETE `/filters/bookmarks` 🔒
+
+**🔥 NEW: Delete multiple bookmarks**
+
+### POST `/filters/bookmarks/load-and-filter` 🔒
+
+**🔥 NEW: Load and merge bookmarks**
+
+Load multiple bookmarks, merge their filters, and apply to recipe search.
+
+---
+
 ## 🌿 Ingredients (3 endpoints)
 
 ### GET `/ingredients` 🔒
@@ -272,7 +363,7 @@ Get instructions for ingredient.
 
 ---
 
-## 📅 Calendars (6 endpoints)
+## 📅 Calendars (7 endpoints)
 
 ### GET `/calendars` 🔒
 
@@ -324,6 +415,179 @@ Copy existing calendar.
 ```json
 {
     "nombre": "Copy of My Meal Plan"
+}
+```
+
+---
+
+### GET `/calendars/schedules` 🔒
+
+**🔥 NEW: Get calendar schedules**
+
+Get all user calendar schedules as JSON (main_schedule and sides_schedule).
+
+**Response:**
+
+```json
+{
+  "data": {
+    "1": {
+      "id": 1,
+      "main_schedule": {...},
+      "sides_schedule": {...}
+    }
+  }
+}
+```
+
+---
+
+## 📋 Lista de Ingredientes (9 endpoints) ✨ NEW
+
+Shopping lists generated from calendar meal plans.
+
+### GET `/calendars/{calendarId}/lista` 🔒
+
+Get all ingredients grouped by categories.
+
+**Response:**
+
+```json
+{
+    "calendar": {
+        "id": 1,
+        "title": "My Weekly Plan"
+    },
+    "categories": [...],
+    "ingredients": {
+        "1": [...],
+        "2": [...]
+    },
+    "taken_ingredients": [...],
+    "custom_items": [...],
+    "total_count": 25
+}
+```
+
+---
+
+### GET `/calendars/{calendarId}/lista/categories/{categoryId}` 🔒
+
+Get ingredients for specific category.
+
+---
+
+### POST `/calendars/{calendarId}/lista/toggle-taken` 🔒
+
+Mark ingredient as taken/purchased (toggle).
+
+**Body:**
+
+```json
+{
+    "categoria_id": 1,
+    "ingrediente_id": 5,
+    "ingrediente_type": "receta"
+}
+```
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "action": "created",
+    "taken_ingredients": [...],
+    "message": "Ingredient marked as taken"
+}
+```
+
+---
+
+### POST `/calendars/{calendarId}/lista/items` 🔒
+
+Add custom ingredient.
+
+**Body:**
+
+```json
+{
+    "cantidad": 2,
+    "nombre": "Pan integral",
+    "categoria": 3
+}
+```
+
+---
+
+### PUT `/calendars/{calendarId}/lista/items/{itemId}` 🔒
+
+Update custom ingredient.
+
+**Body:**
+
+```json
+{
+    "cantidad": 3,
+    "nombre": "Updated name",
+    "categoria": 3
+}
+```
+
+---
+
+### DELETE `/calendars/{calendarId}/lista/items/{itemId}` 🔒
+
+Delete custom ingredient.
+
+---
+
+### GET `/calendars/{calendarId}/lista/pdf` 🔒
+
+Download lista as PDF. Professional users get themed PDFs.
+
+**Query Parameters:**
+
+-   `lista_ingredients` (optional): JSON string
+
+**Response:** PDF file download
+
+---
+
+### POST `/calendars/{calendarId}/lista/pdf/email` 🔒
+
+Email lista as PDF.
+
+**Body:**
+
+```json
+{
+    "recipient_email": "user@example.com",
+    "lista_ingredients": "{}",
+    "plantillas": ""
+}
+```
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "message": "Se envió por mail exitosamente"
+}
+```
+
+---
+
+### POST `/calendars/{calendarId}/lista/email-html` 🔒
+
+Email lista as HTML (no PDF).
+
+**Body:**
+
+```json
+{
+    "lista_ingredients": "{}"
 }
 ```
 
