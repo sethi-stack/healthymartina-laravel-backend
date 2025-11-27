@@ -163,7 +163,7 @@ class User extends Authenticatable
         return '';
     }
      public function userRole() {
-        return $this->belongsTo('App\Role', 'role_id');
+        return $this->belongsTo('App\Models\Role', 'role_id');
     }
     // public function role()
     // {

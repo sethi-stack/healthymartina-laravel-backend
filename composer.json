@@ -12,6 +12,7 @@
         "php": "^8.2",
         "algolia/scout-extended": "^3.0",
         "backpack/crud": "^6.0",
+        "backpack/theme-coreuiv2": "*",
         "barryvdh/laravel-dompdf": "^3.0",
         "cviebrock/eloquent-sluggable": "^11.0",
         "doctrine/dbal": "^3.0",

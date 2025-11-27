@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 // --------------------------
 // Custom Backpack Routes
@@ -17,21 +16,21 @@ Route::group([
     ),
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
-    CRUD::resource('Ingredientes', 'IngredienteCrudController');
-    CRUD::resource('Recetas', 'RecetaCrudController');
-    CRUD::resource('UnidadesMedida', 'UnidadMedidaCrudController');
-    CRUD::resource('Clientes', 'ClienteCrudController');
+    Route::crud('Ingredientes', 'IngredienteCrudController');
+    Route::crud('Recetas', 'RecetaCrudController');
+    Route::crud('UnidadesMedida', 'UnidadMedidaCrudController');
+    Route::crud('Clientes', 'ClienteCrudController');
     Route::post('Clientes/registro', 'ClienteCrudController@registro');
     Route::post('Clientes/registro/validarEmail', 'ClienteCrudController@validarEmailRepetido');
-    CRUD::resource('membresia', 'MembresiaCrudController');
-    CRUD::resource('Categorias', 'CategoriaCrudController');
-    CRUD::resource('FormasCompra', 'FormaCompraCrudController');
-    CRUD::resource('Instrucciones', 'InstruccionCrudController');
-    CRUD::resource('Medidas', 'MedidaCrudController');
-    CRUD::resource('Tags', 'TagCrudController');
-    CRUD::resource('TiposMedida', 'TipoMedidaCrudController');
-    CRUD::resource('RecetaInstruccionReceta', 'RecetaInstruccionRecetaCrudController');
-    CRUD::resource('Nutrientes', 'NutrienteCrudController');
+    Route::crud('membresia', 'MembresiaCrudController');
+    Route::crud('Categorias', 'CategoriaCrudController');
+    Route::crud('FormasCompra', 'FormaCompraCrudController');
+    Route::crud('Instrucciones', 'InstruccionCrudController');
+    Route::crud('Medidas', 'MedidaCrudController');
+    Route::crud('Tags', 'TagCrudController');
+    Route::crud('TiposMedida', 'TipoMedidaCrudController');
+    Route::crud('RecetaInstruccionReceta', 'RecetaInstruccionRecetaCrudController');
+    Route::crud('Nutrientes', 'NutrienteCrudController');
 
     Route::post('Recetas/ingrediente-medida/{ing}', 'RecetaCrudController@ingredienteMedida');
     Route::post('Recetas/receta-medida/{ing}', 'RecetaCrudController@recetaMedida');
@@ -41,14 +40,14 @@ Route::group([
     Route::get('/getFDCData', 'IngredienteCrudController@getFDCData');
     Route::get('/getFDCFood', 'IngredienteCrudController@getFDCFood');
 
-    CRUD::resource('plan', 'PlanCrudController');
-    CRUD::resource('nutrienttype', 'NutrientTypeCrudController');
-    CRUD::resource('terms-conditions', 'TermsConditionsCrudController');
-    CRUD::resource('templates', 'TemplateCrudController');
-    CRUD::resource('privacy-notice', 'PrivacyNoticeCrudController');
-    CRUD::resource('equivalence', 'EquivalenceCrudController');
-    CRUD::resource('comment', 'CommentCrudController');
-    CRUD::resource('youtube-channel', 'YoutubeChannelCrudController');
+    Route::crud('plan', 'PlanCrudController');
+    Route::crud('nutrienttype', 'NutrientTypeCrudController');
+    Route::crud('terms-conditions', 'TermsConditionsCrudController');
+    Route::crud('templates', 'TemplateCrudController');
+    Route::crud('privacy-notice', 'PrivacyNoticeCrudController');
+    Route::crud('equivalence', 'EquivalenceCrudController');
+    Route::crud('comment', 'CommentCrudController');
+    Route::crud('youtube-channel', 'YoutubeChannelCrudController');
 }); // this should be the absolute last line of this file
 
 /**

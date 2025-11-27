@@ -3,101 +3,115 @@
 namespace App\Http\Controllers\Admin;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
+use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 // VALIDATION: change the requests to match your own file names if you need form validation
 use App\Http\Requests\ClienteRequest as StoreRequest;
 use App\Http\Requests\ClienteRequest as UpdateRequest;
-use Backpack\CRUD\CrudPanel;
 use Illuminate\Http\Request;
 use App\Models\Cliente;
-use App\User;
+use App\Models\User;
+use App\Models\Role;
 
 /**
  * Class ClienteCrudController
  * @package App\Http\Controllers\Admin
- * @property-read CrudPanel $crud
+ * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
  */
 class ClienteCrudController extends CrudController
 {
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+
+    /**
+     * Configure the CrudPanel object. Apply settings to all operations.
+     * 
+     * @return void
+     */
     public function setup()
     {
-        /*
-        |--------------------------------------------------------------------------
-        | CrudPanel Basic Information
-        |--------------------------------------------------------------------------
-        */
-        $this->crud->setModel('App\User');
+        CRUD::setModel(\App\Models\User::class);
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/Clientes');
+        CRUD::setEntityNameStrings('cliente', 'clientes');
         
-       
-        $this->crud->setRoute(config('backpack.base.route_prefix') . '/Clientes');
-        $this->crud->setEntityNameStrings('cliente', 'clientes');
-        //$this->crud->removeAllButtons();
-        $this->crud->denyAccess(['create','update']);
+        // Deny create and update operations
+        CRUD::denyAccess(['create', 'update']);
+        
+        // Only show non-admin users
+        CRUD::addClause('whereNull', 'is_admin');
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | CrudPanel Configuration
-        |--------------------------------------------------------------------------
-        */
-
-        // TODO: remove setFromDb() and manually define Fields and Columns
-        $this->crud->setFromDb();
-        $this->crud->addClause('where', 'is_admin', '=', NULL);
-        $this->crud->addColumn([
+    /**
+     * Define what happens when the List operation is loaded.
+     * 
+     * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
+     * @return void
+     */
+    protected function setupListOperation()
+    {
+        CRUD::addColumn([
             'name' => 'created_at',
             'label' => 'Creado en',
-            'type'  => 'datetime',
-            'format' => 'l',
+            'type' => 'datetime',
         ]);
-        $this->crud->addColumn([
+
+        CRUD::addColumn([
             'name' => 'name',
             'label' => 'Nombre(s)',
         ]);
 
-        $this->crud->addColumn([
+        CRUD::addColumn([
             'name' => 'last_name',
             'label' => 'Apellidos',
         ]);
 
-        $this->crud->addColumn([
+        CRUD::addColumn([
             'name' => 'email',
             'label' => 'Email',
         ]);
 
-        $this->crud->addColumn([
+        CRUD::addColumn([
             'name' => 'role_id',
-            'label' => 'Tipo de Membresia',
+            'label' => 'Tipo de Membresía',
             'type' => 'select',
-            'entity'     => 'userRole', // the method that defines the relationship in your Model
-            'attribute'  => 'name',
-            'model'     => App\Role::class,
-            'orderable' => true,
+            'entity' => 'userRole',
+            'attribute' => 'name',
+            'model' => Role::class,
         ]);
         
-        $this->crud->orderBy('role_id', 'DESC');
-        // add asterisk for fields that are required in ClienteRequest
-        $this->crud->setRequiredFields(StoreRequest::class, 'create');
-        $this->crud->setRequiredFields(UpdateRequest::class, 'edit');
+        CRUD::orderBy('role_id', 'DESC');
     }
 
-    public function store(StoreRequest $request)
+    /**
+     * Define what happens when the Create operation is loaded.
+     * 
+     * @see https://backpackforlaravel.com/docs/crud-operation-create
+     * @return void
+     */
+    protected function setupCreateOperation()
     {
-        // your additional operations before save here
-        $redirect_location = parent::storeCrud($request);
-        // your additional operations after save here
-        // use $this->data['entry'] or $this->crud->entry
-        return $redirect_location;
+        CRUD::setValidation(StoreRequest::class);
+        
+        // Add fields here if create operation is enabled
     }
 
-    public function update(UpdateRequest $request)
+    /**
+     * Define what happens when the Update operation is loaded.
+     * 
+     * @see https://backpackforlaravel.com/docs/crud-operation-update
+     * @return void
+     */
+    protected function setupUpdateOperation()
     {
-        // your additional operations before save here
-        $redirect_location = parent::updateCrud($request);
-        // your additional operations after save here
-        // use $this->data['entry'] or $this->crud->entry
-        return $redirect_location;
+        $this->setupCreateOperation();
     }
 
+    /**
+     * Custom registration method
+     */
     public function registro(Request $request)
     {
         $cliente = new Cliente();
@@ -108,16 +122,11 @@ class ClienteCrudController extends CrudController
         $cliente->save();
     }
 
+    /**
+     * Validate if email is already taken
+     */
     public function validarEmailRepetido(Request $request)
     {
-        return User::where('email', $request->email) > 0 ? true : false;
+        return User::where('email', $request->email)->count() > 0;
     }
-
-    // public function destroy($id)
-    // {
-    //     $this->crud->hasAccessOrFail('delete');
-    //     $client = User::find($id);
-    //     User::whereEmail($client->email)->delete();
-    //     return $this->crud->delete($id);
-    // }
 }
