@@ -41,7 +41,7 @@ class SubscriptionController extends Controller
         $plans = $this->retrievePlans();
         
         $stripe = new \Stripe\StripeClient(
-            'config("services.stripe.secret")'
+            'stripe_secret_key'
           );
           $intent = $stripe->setupIntents->create([
             'payment_method_types' => ['card'],
@@ -62,7 +62,7 @@ class SubscriptionController extends Controller
         $plans = $this->retrievePlans();
         $user = Auth::user();
         $stripe = new \Stripe\StripeClient(
-            'config("services.stripe.secret")'
+            'stripe_secret_key'
           );
           $intent = $user->createSetupIntent();
       //  $membresia = Subscription::where('role_id', $user->role->id)->get();
