@@ -483,3 +483,4 @@ echo "   - Email functionality requires proper mail configuration"
 echo "   - PDF generation requires DomPDF setup"
 echo ""
 echo -e "${GREEN}🚀 HealthyMartina API is ready for production!${NC}"
+

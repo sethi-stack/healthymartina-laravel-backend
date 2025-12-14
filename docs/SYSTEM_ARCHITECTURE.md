@@ -118,3 +118,4 @@ Export PDF → Email/Save
 -   [Meal Plans](./MEAL_PLANS.md)
 -   [Subscriptions](./SUBSCRIPTIONS.md)
 -   [User Profiles](./USER_PROFILES.md)
+

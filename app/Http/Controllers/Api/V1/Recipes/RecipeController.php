@@ -29,7 +29,7 @@ class RecipeController extends Controller
     {
         $filters = $request->only([
             'search', 'tags', 'max_calories', 'min_calories', 
-            'tipo_id', 'sort_by', 'sort_order'
+            'sort_by', 'sort_order'
         ]);
 
         $query = $this->recipeService->getFilteredRecipes($filters);

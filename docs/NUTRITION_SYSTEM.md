@@ -339,3 +339,4 @@ $this->save();
 -   [Recipes and Ingredients](./RECIPES_AND_INGREDIENTS.md)
 -   [Calendar System](./CALENDAR_SYSTEM.md) - Daily nutrition aggregation
 -   [Units and Measurements](./UNITS_AND_MEASUREMENTS.md)
+

@@ -88,3 +88,4 @@ The application now correctly uses:
 
 This is the correct Laravel pattern for handling secrets.
 
+

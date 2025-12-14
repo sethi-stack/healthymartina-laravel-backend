@@ -813,7 +813,7 @@ class Receta extends Model
 
     public function reactions()
     {
-        return $this->belongsToMany('App\Models\Reaction');
+        return $this->hasMany('App\Models\Reaction', 'recipe_id');
     }
 
     public function comments()
@@ -919,12 +919,33 @@ class Receta extends Model
 
     public function getLikeReactionsAttribute()
     {
-        return Reaction::whereRecipeId($this->id)->whereIsLike(1)->get()->count();
+        return Reaction::where('recipe_id', $this->id)->where('is_like', 1)->count();
     }
 
     public function getDislikeReactionsAttribute()
     {
-        return Reaction::whereRecipeId($this->id)->whereIsLike(0)->get()->count();
+        return Reaction::where('recipe_id', $this->id)->where('is_like', 0)->count();
+    }
+
+    /**
+     * Get the current user's reaction to this recipe
+     * @return int|null 1 for like, 0 for dislike, null for no reaction
+     */
+    public function getUserReaction()
+    {
+        if (!auth()->check()) {
+            return null;
+        }
+
+        $reaction = Reaction::where('recipe_id', $this->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (!$reaction) {
+            return null;
+        }
+
+        return $reaction->is_like ? 1 : 0;
     }
 
     public function getTituloAttribute()
@@ -934,6 +955,16 @@ class Receta extends Model
 
     public function getCaloriesAttribute()
     {
+        // Check if nutrient_info exists and has the calories key (1008 is FDC ID for calories)
+        if (
+            !$this->nutrient_info ||
+            !is_array($this->nutrient_info) ||
+            !isset($this->nutrient_info[1008]) ||
+            !isset($this->nutrient_info[1008]['cantidad'])
+        ) {
+            return 0;
+        }
+
         return $this->nutrient_info[1008]['cantidad'];
     }
 }

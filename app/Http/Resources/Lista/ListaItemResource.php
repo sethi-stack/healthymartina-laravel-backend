@@ -26,3 +26,4 @@ class ListaItemResource extends JsonResource
     }
 }
 
+

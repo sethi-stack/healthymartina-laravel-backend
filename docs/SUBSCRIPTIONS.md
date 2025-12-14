@@ -330,3 +330,4 @@ class User extends Authenticatable
 -   [User Profiles](./USER_PROFILES.md)
 -   [PDF Export](./PDF_EXPORT.md)
 -   [Meal Plans](./MEAL_PLANS.md)
+

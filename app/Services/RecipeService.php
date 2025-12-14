@@ -37,12 +37,8 @@ class RecipeService
             $query->where('calories', '>=', $filters['min_calories']);
         }
 
-        if (isset($filters['tipo_id'])) {
-            $query->where('tipo_id', $filters['tipo_id']);
-        }
-
         // Eager load relationships
-        $query->with(['tags', 'tipo']);
+        $query->with(['tags']);
 
         // Sort
         $sortBy = $filters['sort_by'] ?? 'created_at';
@@ -60,7 +56,6 @@ class RecipeService
         return Receta::where('slug', $slug)
             ->with([
                 'tags',
-                'tipo',
                 'comments' => function ($query) {
                     $query->orderBy('created_at', 'desc');
                 },
@@ -118,7 +113,7 @@ class RecipeService
 
         return Receta::whereHas('bookmarks', function ($query) use ($userId) {
             $query->where('user_id', $userId);
-        })->with(['tags', 'tipo']);
+        })->with(['tags']);
     }
 
     /**

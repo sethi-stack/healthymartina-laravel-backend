@@ -57,3 +57,4 @@ class IngredienteRequest extends FormRequest
         ];
     }
 }
+
