@@ -47,7 +47,7 @@ class CommentAnsweredNotification extends Notification
             ->line('Alguien ha comentado una de las recetas.' . $this->recipe->titulo)
             ->salutation('Saludos, Healthy Martina')
             ->line('¡Gracias por elegirnos!')
-            ->action('Ir a la receta', route('receta.show', [$this->recipe->slug]));
+            ->action('Ir a la receta', url('/receta/' . $this->recipe->slug));
 
         return $message;
     }

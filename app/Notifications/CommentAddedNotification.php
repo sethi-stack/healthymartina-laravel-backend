@@ -47,7 +47,7 @@ class CommentAddedNotification extends Notification
             ->line('Han contestado uno de tus comentarios en la receta ' . $this->recipe->titulo)
             ->salutation('Saludos, Healthy Martina')
             ->line('¡Gracias por elegirnos!')
-            ->action('Ir a la receta', route('receta.show', [$this->recipe->slug]));
+            ->action('Ir a la receta', url('/receta/' . $this->recipe->slug));
 
         return $message;
     }
