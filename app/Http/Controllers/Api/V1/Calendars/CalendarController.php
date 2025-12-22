@@ -42,6 +42,16 @@ class CalendarController extends Controller
             'estado' => 'active',
             'calendario' => $validated['calendario'] ?? null,
             'data_semanal' => $validated['data_semanal'] ?? null,
+            // Initialize with default schedule structure from config
+            'main_schedule' => json_encode(config('constants.schedule')),
+            'main_leftovers' => json_encode(config('constants.leftovers')),
+            'main_servings' => json_encode(config('constants.main_servings')),
+            'main_racion' => json_encode(config('constants.main_racion')),
+            'sides_schedule' => json_encode(config('constants.schedule')),
+            'sides_leftovers' => json_encode(config('constants.leftovers')),
+            'sides_servings' => json_encode(config('constants.sides_servings')),
+            'sides_racion' => json_encode(config('constants.sides_racion')),
+            'labels' => json_encode(config('constants.labels')),
         ]);
 
         return response()->json([
