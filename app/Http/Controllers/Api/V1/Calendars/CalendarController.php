@@ -30,14 +30,14 @@ class CalendarController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'semanas' => 'nullable|integer|min:1|max:52',
             'calendario' => 'nullable|json',
             'data_semanal' => 'nullable|json',
         ]);
 
         $calendar = Auth::user()->calendars()->create([
-            'nombre' => $validated['nombre'],
+            'title' => $validated['title'],
             'semanas' => $validated['semanas'] ?? 1,
             'estado' => 'active',
             'calendario' => $validated['calendario'] ?? null,
@@ -77,7 +77,7 @@ class CalendarController extends Controller
         $calendar = Auth::user()->calendars()->findOrFail($id);
 
         $validated = $request->validate([
-            'nombre' => 'sometimes|string|max:255',
+            'title' => 'sometimes|string|max:255',
             'semanas' => 'sometimes|integer|min:1|max:52',
             'estado' => 'sometimes|in:active,archived',
             'calendario' => 'sometimes|json',
@@ -113,11 +113,11 @@ class CalendarController extends Controller
         $calendar = Auth::user()->calendars()->findOrFail($id);
 
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
         ]);
 
         $newCalendar = $calendar->replicate();
-        $newCalendar->nombre = $validated['nombre'];
+        $newCalendar->title = $validated['title'];
         $newCalendar->save();
 
         return response()->json([

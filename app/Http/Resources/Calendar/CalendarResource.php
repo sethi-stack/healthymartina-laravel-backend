@@ -17,8 +17,7 @@ class CalendarResource extends JsonResource
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
-            'nombre' => $this->nombre,
-            'title' => $this->nombre, // Alias for compatibility
+            'title' => $this->title,
             'semanas' => $this->semanas,
             'estado' => $this->estado,
             'calendario' => $this->calendario ? json_decode($this->calendario, true) : [],
