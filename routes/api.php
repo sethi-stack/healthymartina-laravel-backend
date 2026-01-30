@@ -106,11 +106,17 @@ Route::prefix('v1')->group(function () {
         Route::prefix('calendars')->group(function () {
             Route::get('/', [CalendarController::class, 'index'])->name('api.v1.calendars.index');
             Route::post('/', [CalendarController::class, 'store'])->name('api.v1.calendars.store');
-            Route::get('/{id}', [CalendarController::class, 'show'])->name('api.v1.calendars.show');
-            Route::put('/{id}', [CalendarController::class, 'update'])->name('api.v1.calendars.update');
-            Route::delete('/{id}', [CalendarController::class, 'destroy'])->name('api.v1.calendars.destroy');
-            Route::post('/{id}/copy', [CalendarController::class, 'copy'])->name('api.v1.calendars.copy');
-            
+            Route::get('/{id}', [CalendarController::class, 'show'])->where('id', '[0-9]+')->name('api.v1.calendars.show');
+            Route::put('/{id}', [CalendarController::class, 'update'])->where('id', '[0-9]+')->name('api.v1.calendars.update');
+            Route::delete('/{id}', [CalendarController::class, 'destroy'])->where('id', '[0-9]+')->name('api.v1.calendars.destroy');
+            Route::post('/{id}/copy', [CalendarController::class, 'copy'])->where('id', '[0-9]+')->name('api.v1.calendars.copy');
+
+            // Calendar labels (day/meal names)
+            Route::post('/{id}/labels', [CalendarController::class, 'updateLabels'])->where('id', '[0-9]+')->name('api.v1.calendars.labels');
+
+            // Calendar nutrition info
+            Route::get('/{id}/nutrition/{dayId}', [CalendarController::class, 'getNutritionInfo'])->where('id', '[0-9]+')->name('api.v1.calendars.nutrition');
+
             // Calendar schedules
             Route::get('/schedules', [CalendarController::class, 'schedules'])->name('api.v1.calendars.schedules');
             
