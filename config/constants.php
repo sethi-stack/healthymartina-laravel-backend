@@ -402,12 +402,12 @@ return [
             'mostrar' => 1,
             'id' => 99,
         ],
-        1008 => 
+        1008 =>
         [
             'orden' => 1,
             'nombre' => 'Calorías',
             'porcentaje' => 0,
-            'color' => '#40deb',
+            'color' => '#40deb4',
             'cantidad' => 0,
             'unidad_medida' => 'kcal',
             'mostrar' => 1,
@@ -589,12 +589,12 @@ return [
             'mostrar' => 1,
             'id' => 115,
         ],
-        1175 => 
+        1175 =>
         [
             'orden' => 23,
             'nombre' => 'Vitamina B6',
             'porcentaje' => 0,
-            'color' => '#dac77',
+            'color' => '#dac774',
             'cantidad' => 0,
             'unidad_medida' => 'mg',
             'mostrar' => 1,

@@ -607,7 +607,7 @@ function getDayNutritionData($daykey, $calendar, $visible_info, $filter_info)
     foreach ($sidesDayData as $meal => $id) {
         $recipeRacionMapping[$id] = $sidesRacionDayData[$meal] ?? null;
     }
-    $cRecps = Receta::select('id', 'titulo')->whereIn('id', $allRecipeIds)->get();
+    $cRecps = Receta::whereIn('id', $allRecipeIds)->get();
     $rIdRecMapping = [];
     foreach($cRecps as $r){
         $rIdRecMapping[$r['id']] = $r;
