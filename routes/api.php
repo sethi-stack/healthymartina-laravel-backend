@@ -71,6 +71,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/bookmarks', [RecipeController::class, 'bookmarks'])->name('api.v1.recipes.bookmarks');
             
             // Recipe by ID routes (must come before {slug})
+            Route::get('/id/{id}', [RecipeController::class, 'showById'])->where('id', '[0-9]+')->name('api.v1.recipes.showById');
             Route::get('/{id}/similar', [RecipeController::class, 'similar'])->where('id', '[0-9]+')->name('api.v1.recipes.similar');
             Route::get('/{id}/stats', [RecipeController::class, 'stats'])->where('id', '[0-9]+')->name('api.v1.recipes.stats');
             Route::post('/{id}/bookmark', [RecipeController::class, 'toggleBookmark'])->where('id', '[0-9]+')->name('api.v1.recipes.bookmark');
@@ -119,6 +120,11 @@ Route::prefix('v1')->group(function () {
 
             // Calendar schedules
             Route::get('/schedules', [CalendarController::class, 'schedules'])->name('api.v1.calendars.schedules');
+
+            // Calendar recipe management
+            Route::post('/{id}/recipes', [CalendarController::class, 'addRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.add');
+            Route::put('/{id}/recipes', [CalendarController::class, 'updateRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.update');
+            Route::delete('/{id}/recipes', [CalendarController::class, 'removeRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.remove');
             
             // Lista de Ingredientes (Calendar ingredient lists)
             Route::prefix('{calendarId}/lista')->group(function () {

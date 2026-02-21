@@ -584,21 +584,28 @@ function getDayNutritionForModal($daykey, $calendar, $visible_info, $filter_info
 function getDayNutritionData($daykey, $calendar, $visible_info, $filter_info)
 {
     $nutrientes_data = [];
-    $cMains = json_decode($calendar->main_schedule, true);
-    $cSides = json_decode($calendar->sides_schedule, true);
-    $cMracion = json_decode($calendar->main_racion, true);
-    $cSracion = json_decode($calendar->sides_racion, true);
+    $cMains = json_decode($calendar->main_schedule, true) ?? [];
+    $cSides = json_decode($calendar->sides_schedule, true) ?? [];
+    $cMracion = json_decode($calendar->main_racion, true) ?? [];
+    $cSracion = json_decode($calendar->sides_racion, true) ?? [];
     $recipeRacionMapping = [];
     $constants_nutritients = config()->get('constants.nutritients');
-    $allRecipeIds = array_filter((([...array_values($cMains[$daykey]), ...array_values($cSides[$daykey])])));
+
+    // Check if day exists in the arrays, provide empty array if not
+    $mainDayData = $cMains[$daykey] ?? [];
+    $sidesDayData = $cSides[$daykey] ?? [];
+    $mainRacionDayData = $cMracion[$daykey] ?? [];
+    $sidesRacionDayData = $cSracion[$daykey] ?? [];
+
+    $allRecipeIds = array_filter((([...array_values($mainDayData), ...array_values($sidesDayData)])));
     $countsPerRecipe = array_count_values($allRecipeIds);
-    // $allRacions = array_filter((([...array_values($cMracion[$daykey]), ...array_values($cSracion[$daykey])])));
+    // $allRacions = array_filter((([...array_values($mainRacionDayData), ...array_values($sidesRacionDayData)])));
     $nutRecipesMapping = [];
-    foreach ($cMains[$daykey] as $meal => $id) {
-        $recipeRacionMapping[$id] = $cMracion[$daykey][$meal];
+    foreach ($mainDayData as $meal => $id) {
+        $recipeRacionMapping[$id] = $mainRacionDayData[$meal] ?? null;
     }
-    foreach ($cSides[$daykey] as $meal => $id) {
-        $recipeRacionMapping[$id] = $cSracion[$daykey][$meal];
+    foreach ($sidesDayData as $meal => $id) {
+        $recipeRacionMapping[$id] = $sidesRacionDayData[$meal] ?? null;
     }
     $cRecps = Receta::select('id', 'titulo')->whereIn('id', $allRecipeIds)->get();
     $rIdRecMapping = [];

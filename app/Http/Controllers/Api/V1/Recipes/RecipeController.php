@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Recipes;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Recipe\RecipeResource;
+use App\Http\Resources\Recipe\RecipeListResource;
 use App\Models\Receta;
 use App\Services\RecipeService;
 use App\Services\RecipeFilterService;
@@ -24,29 +25,47 @@ class RecipeController extends Controller
 
     /**
      * Display a listing of recipes with filtering.
+     * Uses lightweight RecipeListResource to prevent memory issues with large result sets.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
         $filters = $request->only([
-            'search', 'tags', 'max_calories', 'min_calories', 
+            'search', 'tags', 'max_calories', 'min_calories',
             'sort_by', 'sort_order'
         ]);
 
         $query = $this->recipeService->getFilteredRecipes($filters);
-        
+
         // Paginate
         $perPage = $request->get('per_page', 15);
         $recipes = $query->paginate($perPage);
 
-        return RecipeResource::collection($recipes);
+        return RecipeListResource::collection($recipes);
     }
 
     /**
-     * Display the specified recipe.
+     * Display the specified recipe by slug.
      */
     public function show(string $slug): RecipeResource
     {
         $recipe = $this->recipeService->getRecipeBySlug($slug);
+        return new RecipeResource($recipe);
+    }
+
+    /**
+     * Display the specified recipe by ID.
+     */
+    public function showById(int $id): RecipeResource
+    {
+        $recipe = Receta::where('id', $id)
+            ->with([
+                'tags',
+                'comments' => function ($query) {
+                    $query->orderBy('created_at', 'desc');
+                },
+                'reactions',
+            ])
+            ->firstOrFail();
         return new RecipeResource($recipe);
     }
 

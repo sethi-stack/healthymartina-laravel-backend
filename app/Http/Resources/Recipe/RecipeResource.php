@@ -35,8 +35,14 @@ class RecipeResource extends JsonResource
             'filter_info' => $filterInfo,
             'imagen_principal' => $this->imagen_principal,
             'imagen_secundaria' => $this->imagen_secundaria,
+            'imagen_pequena' => $this->imagen_principal, // Add small image field
+            'imagen' => $this->imagen_principal, // Add image field for backwards compatibility
+            'porcion_nombre' => $this->getPorciones()['nombre'] ?? 'Porción',
+            'porcion_nombre_plural' => $this->getPorciones()['nombre_plural'] ?? 'Porciones',
             'tags' => TagResource::collection($this->whenLoaded('tags')),
-            'comments_count' => $this->comments->count() ?? 0,
+            'comments_count' => $this->whenLoaded('comments', function () {
+                return $this->comments->count();
+            }, 0),
             'ingredientes_count' => $this->getCantidadIngredientes(),
             'like_reactions' => $this->like_reactions ?? 0,
             'dislike_reactions' => $this->dislike_reactions ?? 0,
