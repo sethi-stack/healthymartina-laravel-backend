@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
@@ -17,29 +18,34 @@ class ProfileController extends Controller
      */
     public function show(): UserResource
     {
-        return new UserResource(Auth::user()->load(['preference', 'membresia']));
+        return new UserResource(Auth::user()->load(['preference']));
     }
 
     /**
-     * Update user profile.
+     * Update user profile (personal + business info).
      */
     public function update(Request $request): JsonResponse
     {
         $user = Auth::user();
 
         $validated = $request->validate([
+            // Personal info
             'name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $user->id,
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
-            'telefono' => 'sometimes|nullable|string|max:20',
-            'fecha_nacimiento' => 'sometimes|nullable|date',
+            // Business info
+            'bname' => 'sometimes|nullable|string|max:255',
+            'profession' => 'sometimes|nullable|string|max:255',
+            'bemail' => 'sometimes|nullable|email|max:255',
+            'website' => 'sometimes|nullable|url|max:255',
+            'color' => 'sometimes|nullable|string|max:20',
         ]);
 
         $user->update($validated);
 
         return response()->json([
-            'user' => new UserResource($user->fresh()),
+            'user' => new UserResource($user->fresh()->load(['preference'])),
             'message' => 'Profile updated successfully',
         ]);
     }
@@ -79,21 +85,88 @@ class ProfileController extends Controller
      */
     public function uploadPhoto(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'photo' => 'required|image|max:2048', // 2MB max
+        $request->validate([
+            'photo' => 'required|image|max:2048',
         ]);
 
         $user = Auth::user();
-        
-        // Handle photo upload (implementation depends on storage setup)
+
         if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('profiles', 'gcs');
-            $user->update(['imagen_principal' => $path]);
+            // Delete old photo if exists
+            if ($user->getOriginal('image')) {
+                Storage::disk('gcs')->delete($user->getOriginal('image'));
+            }
+            $path = $request->file('photo')->store('users/profile_pictures', 'gcs');
+            $user->update(['image' => $path]);
         }
 
         return response()->json([
-            'user' => new UserResource($user->fresh()),
+            'user' => new UserResource($user->fresh()->load(['preference'])),
             'message' => 'Photo uploaded successfully',
+        ]);
+    }
+
+    /**
+     * Delete profile photo.
+     */
+    public function deletePhoto(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if ($user->getOriginal('image')) {
+            Storage::disk('gcs')->delete($user->getOriginal('image'));
+        }
+
+        $user->update(['image' => null]);
+
+        return response()->json([
+            'user' => new UserResource($user->fresh()->load(['preference'])),
+            'message' => 'Photo deleted successfully',
+        ]);
+    }
+
+    /**
+     * Upload business logo.
+     */
+    public function uploadBusinessPhoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => 'required|image|max:2048',
+        ]);
+
+        $user = Auth::user();
+
+        if ($request->hasFile('photo')) {
+            // Delete old logo if exists
+            if ($user->getOriginal('bimage')) {
+                Storage::disk('gcs')->delete($user->getOriginal('bimage'));
+            }
+            $path = $request->file('photo')->store('users/business_logos', 'gcs');
+            $user->update(['bimage' => $path]);
+        }
+
+        return response()->json([
+            'user' => new UserResource($user->fresh()->load(['preference'])),
+            'message' => 'Business photo uploaded successfully',
+        ]);
+    }
+
+    /**
+     * Delete business logo.
+     */
+    public function deleteBusinessPhoto(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if ($user->getOriginal('bimage')) {
+            Storage::disk('gcs')->delete($user->getOriginal('bimage'));
+        }
+
+        $user->update(['bimage' => null]);
+
+        return response()->json([
+            'user' => new UserResource($user->fresh()->load(['preference'])),
+            'message' => 'Business photo deleted successfully',
         ]);
     }
 
@@ -128,4 +201,3 @@ class ProfileController extends Controller
         ]);
     }
 }
-

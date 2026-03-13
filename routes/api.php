@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Calendars\ListaPdfController;
 use App\Http\Controllers\Api\V1\Plans\MealPlanController;
 use App\Http\Controllers\Api\V1\Plans\MealPlanPdfController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
+use App\Http\Controllers\Api\V1\User\PreferencesController;
 use App\Http\Controllers\Api\V1\Ingredients\IngredientController;
 use App\Http\Controllers\Api\V1\Subscriptions\SubscriptionController;
 use App\Http\Controllers\Api\V1\LegalDocsController;
@@ -163,7 +164,16 @@ Route::prefix('v1')->group(function () {
             Route::put('/', [ProfileController::class, 'update'])->name('api.v1.profile.update');
             Route::put('/password', [ProfileController::class, 'updatePassword'])->name('api.v1.profile.password');
             Route::post('/photo', [ProfileController::class, 'uploadPhoto'])->name('api.v1.profile.photo');
+            Route::delete('/photo', [ProfileController::class, 'deletePhoto'])->name('api.v1.profile.photo.delete');
+            Route::post('/business/photo', [ProfileController::class, 'uploadBusinessPhoto'])->name('api.v1.profile.business.photo');
+            Route::delete('/business/photo', [ProfileController::class, 'deleteBusinessPhoto'])->name('api.v1.profile.business.photo.delete');
             Route::delete('/', [ProfileController::class, 'destroy'])->name('api.v1.profile.destroy');
+        });
+
+        // User Preferences routes
+        Route::prefix('preferences')->group(function () {
+            Route::get('/', [PreferencesController::class, 'show'])->name('api.v1.preferences.show');
+            Route::put('/', [PreferencesController::class, 'update'])->name('api.v1.preferences.update');
         });
         
         // Filter Bookmarks routes

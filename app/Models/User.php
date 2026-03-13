@@ -60,6 +60,8 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name', 'last_name', 'username', 'email', 'password',
+        'image', 'bname', 'profession', 'bemail', 'website', 'bimage', 'color',
+        'unit_measure', 'theme',
     ];
 
     /**
@@ -80,6 +82,27 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    public function getImageAttribute()
+    {
+        return $this->attributes['image'] ? Storage::url($this->attributes['image']) : null;
+    }
+
+    public function getBimageAttribute()
+    {
+        return $this->attributes['bimage'] ? Storage::url($this->attributes['bimage']) : null;
+    }
+
+    // theme is stored as int: 0=light, 1=dark
+    public function getThemeAttribute($value): string
+    {
+        return $value ? 'dark' : 'light';
+    }
+
+    public function setThemeAttribute($value): void
+    {
+        $this->attributes['theme'] = $value === 'dark' ? 1 : 0;
+    }
+
     public function preference()
     {
         return $this->hasOne('App\Models\NotificationPreference', 'user_id');
@@ -94,19 +117,6 @@ class User extends Authenticatable
     {
         return Reaction::whereRecipeId($recipe_id)->whereUserId($this->id)->whereIsLike($reaction)->first() ? true : false;
     }
-
-    public function getImageAttribute()
-    {
-        return Storage::url($this->attributes['image']);
-    }
-    public function getBimageAttribute()
-    {
-        return Storage::url($this->attributes['bimage']);
-    }
-    /*public function setImageAttribute($image)
-    {
-        $this->attributes['image'] =  Storage::put('users/' . $this->id, $image);
-    }*/
 
     public function getCompletedProfileAttribute()
     {
