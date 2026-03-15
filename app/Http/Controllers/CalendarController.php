@@ -7,7 +7,7 @@ use App\Models\Categoria;
 use App\Models\ListaIngredientes;
 use App\Models\Receta;
 use App\User;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use DB;
 use iio\libmergepdf\Merger;
 use Illuminate\Http\Request;

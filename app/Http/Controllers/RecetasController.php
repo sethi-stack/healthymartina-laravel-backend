@@ -18,7 +18,7 @@ use App\Models\RecetaInstruccionReceta;
 use App\Models\Tag;
 use App\Notifications\CommentAnsweredNotification;
 use App\Notifications\CommentAddedNotification;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;

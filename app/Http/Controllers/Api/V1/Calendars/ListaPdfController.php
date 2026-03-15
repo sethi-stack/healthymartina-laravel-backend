@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Calendar;
 use App\Models\Categoria;
 use App\Models\ListaIngredientes;
-use Barryvdh\DomPDF\Facade as PDF;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;

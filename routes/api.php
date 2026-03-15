@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Recipes\PdfController as RecipePdfController;
 use App\Http\Controllers\Api\V1\Calendars\CalendarController;
 use App\Http\Controllers\Api\V1\Calendars\ListaController;
 use App\Http\Controllers\Api\V1\Calendars\ListaPdfController;
+use App\Http\Controllers\Api\V1\Calendars\CalendarPdfController;
 use App\Http\Controllers\Api\V1\Plans\MealPlanController;
 use App\Http\Controllers\Api\V1\Plans\MealPlanPdfController;
 use App\Http\Controllers\Api\V1\User\ProfileController;
@@ -121,6 +122,9 @@ Route::prefix('v1')->group(function () {
 
             // Calendar schedules
             Route::get('/schedules', [CalendarController::class, 'schedules'])->name('api.v1.calendars.schedules');
+
+            // Calendar PDF export (combined: calendar + lista + nutrition)
+            Route::post('/export/pdf', [CalendarPdfController::class, 'download'])->name('api.v1.calendars.export.pdf');
 
             // Calendar recipe management
             Route::post('/{id}/recipes', [CalendarController::class, 'addRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.add');
