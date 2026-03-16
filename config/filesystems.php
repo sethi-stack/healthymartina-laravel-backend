@@ -47,17 +47,18 @@ return [
             'report' => false,
         ],
 
-        's3' => [
+        // DigitalOcean Spaces (S3-compatible)
+        'spaces' => [
             'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'key' => env('DO_SPACES_KEY'),
+            'secret' => env('DO_SPACES_SECRET'),
+            'region' => env('DO_SPACES_REGION', 'nyc3'),
+            'bucket' => env('DO_SPACES_BUCKET'),
+            'endpoint' => env('DO_SPACES_ENDPOINT', 'https://nyc3.digitaloceanspaces.com'),
+            'url' => env('DO_SPACES_URL'),   // CDN URL: https://{bucket}.{region}.cdn.digitaloceanspaces.com
+            'use_path_style_endpoint' => false,
+            'visibility' => 'public',
             'throw' => false,
-            'report' => false,
         ],
 
     ],

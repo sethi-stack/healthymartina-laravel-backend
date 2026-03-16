@@ -991,7 +991,7 @@ class CalendarController extends BaseController
                     }
                     $createdPdf = $pdf_merger->merge();
                     $bindFileName = Auth::user()->id . '-' . $calName .'-'.auth()->user()->theme . '.pdf';
-                    Storage::disk('gcs')->put($bindFileName, $createdPdf);
+                    Storage::disk('spaces')->put($bindFileName, $createdPdf);
                     for ($i = 0; $i < $request->total; $i++) {
                         $exists = Storage::disk($disk)->exists($partialFileName . $i . '.pdf');
                         if ($exists) {

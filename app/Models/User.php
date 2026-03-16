@@ -130,7 +130,7 @@ class User extends Authenticatable
     public function setImagenPrincipalAttribute($value)
     {
         $attribute_name = "imagen_principal";
-        $disk = 'gcs'; // or use your own disk, defined in config/filesystems.php
+        $disk = 'spaces'; // or use your own disk, defined in config/filesystems.php
         $destination_path = "users/profile_pictures"; // path relative to the disk above
 
         // if the image was erased

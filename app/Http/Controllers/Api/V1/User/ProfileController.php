@@ -94,9 +94,9 @@ class ProfileController extends Controller
         if ($request->hasFile('photo')) {
             // Delete old photo if exists
             if ($user->getOriginal('image')) {
-                Storage::disk('gcs')->delete($user->getOriginal('image'));
+                Storage::disk('spaces')->delete($user->getOriginal('image'));
             }
-            $path = $request->file('photo')->store('users/profile_pictures', 'gcs');
+            $path = $request->file('photo')->store('users/profile_pictures', 'spaces');
             $user->update(['image' => $path]);
         }
 
@@ -114,7 +114,7 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         if ($user->getOriginal('image')) {
-            Storage::disk('gcs')->delete($user->getOriginal('image'));
+            Storage::disk('spaces')->delete($user->getOriginal('image'));
         }
 
         $user->update(['image' => null]);
@@ -139,9 +139,9 @@ class ProfileController extends Controller
         if ($request->hasFile('photo')) {
             // Delete old logo if exists
             if ($user->getOriginal('bimage')) {
-                Storage::disk('gcs')->delete($user->getOriginal('bimage'));
+                Storage::disk('spaces')->delete($user->getOriginal('bimage'));
             }
-            $path = $request->file('photo')->store('users/business_logos', 'gcs');
+            $path = $request->file('photo')->store('users/business_logos', 'spaces');
             $user->update(['bimage' => $path]);
         }
 
@@ -159,7 +159,7 @@ class ProfileController extends Controller
         $user = Auth::user();
 
         if ($user->getOriginal('bimage')) {
-            Storage::disk('gcs')->delete($user->getOriginal('bimage'));
+            Storage::disk('spaces')->delete($user->getOriginal('bimage'));
         }
 
         $user->update(['bimage' => null]);
