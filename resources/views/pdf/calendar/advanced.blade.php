@@ -1,0 +1,1 @@
+@include('pdf.calendar.bold')

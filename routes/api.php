@@ -125,6 +125,7 @@ Route::prefix('v1')->group(function () {
 
             // Calendar PDF export (combined: calendar + lista + nutrition)
             Route::post('/export/pdf', [CalendarPdfController::class, 'download'])->name('api.v1.calendars.export.pdf');
+            Route::post('/export/pdf/email', [CalendarPdfController::class, 'email'])->name('api.v1.calendars.export.pdf.email');
 
             // Calendar recipe management
             Route::post('/{id}/recipes', [CalendarController::class, 'addRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.add');

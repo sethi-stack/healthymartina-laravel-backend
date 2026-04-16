@@ -84,12 +84,16 @@ class User extends Authenticatable
 
     public function getImageAttribute()
     {
-        return $this->attributes['image'] ? Storage::url($this->attributes['image']) : null;
+        $image = $this->attributes['image'] ?? null;
+
+        return $image ? Storage::url($image) : null;
     }
 
     public function getBimageAttribute()
     {
-        return $this->attributes['bimage'] ? Storage::url($this->attributes['bimage']) : null;
+        $bimage = $this->attributes['bimage'] ?? null;
+
+        return $bimage ? Storage::url($bimage) : null;
     }
 
     // theme is stored as int: 0=light, 1=dark

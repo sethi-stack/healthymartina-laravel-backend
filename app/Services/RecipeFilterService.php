@@ -31,20 +31,6 @@ class RecipeFilterService
             }
         }
 
-        // Apply ingredient inclusion filter (ALL ingredients must be present)
-        if (isset($filters['ingrediente_incluir']) && !empty($filters['ingrediente_incluir'])) {
-            $query->whereHas('recetaInstruccionReceta.instruccion.ingrediente', function (Builder $query) use ($filters) {
-                $query->whereIn('ingrediente_id', $filters['ingrediente_incluir']);
-            });
-        }
-
-        // Apply ingredient exclusion filter
-        if (isset($filters['ingrediente_excluir']) && !empty($filters['ingrediente_excluir'])) {
-            $query->whereDoesntHave('recetaInstruccionReceta.instruccion.ingrediente', function (Builder $query) use ($filters) {
-                $query->whereIn('ingrediente_id', $filters['ingrediente_excluir']);
-            });
-        }
-
         // Apply number of ingredients filter
         if (isset($filters['num_ingredientes'])) {
             if (isset($filters['num_ingredientes']['min']) && $filters['num_ingredientes']['min'] > 0) {
@@ -106,6 +92,20 @@ class RecipeFilterService
             }
         }
 
+        // Apply ingredient filters before materializing the result set so we keep the
+        // candidate pool small and avoid recursion-heavy scans across the entire table.
+        if (isset($filters['ingrediente_excluir']) && !empty($filters['ingrediente_excluir'])) {
+            $query->whereDoesntHave('recetaInstruccionReceta.instruccion.ingrediente', function (Builder $query) use ($filters) {
+                $query->whereIn('id', $filters['ingrediente_excluir']);
+            });
+        }
+
+        if (isset($filters['ingrediente_incluir']) && !empty($filters['ingrediente_incluir'])) {
+            $query->whereHas('recetaInstruccionReceta.instruccion.ingrediente', function (Builder $query) use ($filters) {
+                $query->whereIn('id', $filters['ingrediente_incluir']);
+            });
+        }
+
         $query->orderBy('recetas.id', 'desc');
         $recipes = $query->get();
 
@@ -126,7 +126,7 @@ class RecipeFilterService
      */
     private function filterByExcludedIngredients(Collection $recipes, array $excludedIngredients): Collection
     {
-        return $recipes->filter(function ($recipe) use ($excludedIngredients) {
+        $filteredRecipes = $recipes->filter(function ($recipe) use ($excludedIngredients) {
             // Check subrecipes for excluded ingredients
             $matchingChildren = RecetaInstruccionReceta::where('receta_id', $recipe->id)
                 ->whereNotNull('subreceta_id')
@@ -138,7 +138,7 @@ class RecipeFilterService
             }, $matchingChildren);
 
             $children = Receta::whereIn('id', $childIds)->get();
-            
+
             foreach ($children as $child) {
                 $childIngredients = array_map(function ($ingredients) {
                     return $ingredients['ingrediente_id'] ?? null;
@@ -147,12 +147,16 @@ class RecipeFilterService
                 $childIngredients = array_filter($childIngredients);
 
                 if (count(array_intersect($childIngredients, $excludedIngredients)) > 0) {
-                    return false; // Exclude this recipe
+                    return false;
                 }
             }
 
-            return true; // Keep this recipe
+            return true;
         });
+
+        $ids = $filteredRecipes->pluck('id')->unique()->values()->all();
+
+        return empty($ids) ? Receta::whereRaw('1 = 0')->get() : Receta::findMany($ids);
     }
 
     /**
@@ -169,12 +173,9 @@ class RecipeFilterService
 
             $recipeIngredients = array_filter($recipeIngredients);
 
-            // Check if recipe has ALL required ingredients
             if (count(array_intersect($recipeIngredients, $includedIngredients)) == count($includedIngredients)) {
-                // Recipe has all ingredients - add it and its parents
                 $filteredRecipes->push($recipe);
 
-                // Add parent recipes if they match tag filters
                 $matchingParents = RecetaInstruccionReceta::where('subreceta_id', $recipe->id)
                     ->get(['receta_id'])
                     ->toArray();
@@ -196,17 +197,18 @@ class RecipeFilterService
                     $filteredRecipes->push($parent);
                 }
             } else {
-                // Recipe doesn't have all ingredients - check if combined with parent it does
                 $matchingIngredients = array_intersect($recipeIngredients, $includedIngredients);
                 $parentRecipe = $this->checkIfCombinedWithParentsIncludeAll($recipe, $includedIngredients, $matchingIngredients);
-                
+
                 if ($parentRecipe) {
                     $filteredRecipes->push($parentRecipe);
                 }
             }
         }
 
-        return $filteredRecipes->unique('id');
+        $ids = $filteredRecipes->unique('id')->pluck('id')->values()->all();
+
+        return empty($ids) ? Receta::whereRaw('1 = 0')->get() : Receta::findMany($ids);
     }
 
     /**
@@ -244,6 +246,9 @@ class RecipeFilterService
 
         return null;
     }
+
+    // No recursive full-table flattening here: the bounded legacy-style candidate set
+    // keeps the advanced filter from exhausting memory on large recipe catalogs.
 
     /**
      * Get default filter values (from original bookmark JSON).
@@ -326,4 +331,3 @@ class RecipeFilterService
         ];
     }
 }
-
