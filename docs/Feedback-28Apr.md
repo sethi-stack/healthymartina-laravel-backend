@@ -17,7 +17,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Export recipe button does not work.
    - Add comment button does not work.
 
-2. **Recipe details navigation broken**
+2. **Recipe details navigation broken** - `DONE` (2026-04-29)
    - “View recipe details” leads to 404.
    - Same 404 from 3-dot calendar menu.
 
@@ -121,6 +121,10 @@ Start with:
 - 2026-04-29: `P1.2` completed.
   - Main recipe library add-to-calendar now opens legacy `AddMealModal` with selected recipe preloaded.
   - Stored calendar selection now validated against current calendar list, with safe fallback + persistence.
+- 2026-04-29: `P0.2` completed.
+  - Added robust recipe detail routing fallback by ID (`/receta-id/:id`) when slug is unavailable.
+  - Calendar menu “Ver receta” now opens by slug when present, otherwise by ID.
+  - Add-meal “Ver detalles de receta” link now uses same slug/ID fallback.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.
