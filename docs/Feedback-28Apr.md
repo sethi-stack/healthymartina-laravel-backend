@@ -28,17 +28,19 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Deleting one instance from menu deletes all matching instances across days/slot.
    - Manually adding one slot can delete existing entries in same slot on other days.
 
-4. **Drag and drop cannot complete move**
+4. **Drag and drop cannot complete move** - `DONE WITH OPEN UI BUG` (2026-04-29)
    - Item returns to original position after drop.
+   - Open bug: drag preview shows extra height at bottom while dragging.
 
-5. **Grocery list core actions unavailable**
+5. **Grocery list core actions unavailable** - `NEEDS RETEST` (2026-04-29)
    - Cannot add ingredients.
    - Cannot validate existing list items.
    - Cannot export/send grocery list by email.
 
 ### P1 - High
-1. **Recipe content missing in detail**
-   - Ingredients and tips not showing in recipes.
+1. **Recipe content missing in detail** - `DONE` (2026-04-29)
+   - Ingredients, instructions, and tips rendering restored in recipes.
+   - Fixed recipe detail tab/content style collisions caused by global `.options` selectors.
 
 2. **Main recipe library calendar action unavailable** - `DONE` (2026-04-29)
    - Cannot add recipes to calendar from main library.
@@ -130,6 +132,36 @@ Start with:
   - In edit popup, day uncheck now removes recipe from unchecked days as expected.
   - Prevented stale selected calendar mismatch when switching calendars.
   - Reduced calendar edit over-fetch by tightening query invalidation and cache updates.
+- 2026-04-29: `P0.4` functional completion.
+  - Drag/drop now persists and supports main+side movement.
+  - Known remaining UI bug tracked: drag preview extra bottom height.
+- 2026-04-29: `P0.5` started.
+  - Fixed lista frontend API routes to match backend endpoints.
+  - Wired lista email send with required `lista_ingredients` payload.
+- 2026-04-29: `P0.5` implementation pass completed (pending QA retest).
+  - Fixed lista toggle endpoint + payload (`ingrediente_id`, `categoria_id`, `ingrediente_type`).
+  - Added optimistic update for ingredient check/uncheck to reduce perceived lag.
+  - Fixed custom ingredient add/update/delete routes and calendar ID wiring.
+  - Merged `custom_items` into category rendering so manual ingredients show under selected category.
+  - Connected lista export/email payload handling and improved mutation/refetch behavior.
+- 2026-04-29: Lista/Calendar UX follow-up completed.
+  - Added loading overlays for API wait states (post-initial-load waits).
+  - Removed duplicate loader behavior on initial page load.
+  - Fixed lista checkbox alignment and text wrapping by reusing shared checkbox pattern.
+  - Scoped auth-only checkbox styles to prevent global leakage into Lista layout.
+  - Improved Lista header readability (`ingredientes` counter contrast).
+- 2026-04-29: Commits for this phase:
+  - `2239df0` - Fix lista/calendar loading UX and checkbox alignment.
+  - `fbc0f30` - Update calendar cell behavior/styles and add agent guidance.
+- 2026-04-29: `P1.1` completed.
+  - Restored recipe detail content rendering for ingredients/instructions/tips.
+  - Fixed instruction line-merge formatting from split backend lines.
+  - Scoped conflicting global `.options` styles to stop cross-page CSS leakage into recipe detail tabs.
+  - Commit: `0f967be` (react-front-app).
+
+## Active Next Item
+- `P1.3` **Bookmark action not working** - `NEXT`
+  - Clicking bookmark does nothing.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.
