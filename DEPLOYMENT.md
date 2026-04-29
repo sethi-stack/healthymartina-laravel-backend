@@ -738,3 +738,161 @@ php8.3 artisan vendor:publish --provider="Backpack\CRUD\BackpackServiceProvider"
 php8.3 artisan basset:cache
 php8.3 artisan storage:link
 ```
+
+---
+
+## 15. Droplet Setup History
+
+This is a sanitized version of the command history used on the staging droplet.
+Secrets, passwords, and one-off interactive input are intentionally redacted.
+
+### 15.1 Base OS and packages
+
+```bash
+apt update && apt upgrade -y
+apt install -y software-properties-common
+add-apt-repository ppa:ondrej/php -y
+apt update
+apt install -y \
+  nginx \
+  php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring php8.3-xml \
+  php8.3-curl php8.3-gd php8.3-zip php8.3-bcmath php8.3-intl \
+  php8.3-gmp php8.3-tokenizer php8.3-fileinfo \
+  mysql-server \
+  git \
+  unzip \
+  curl
+```
+
+### 15.2 Composer, users, and SSH
+
+```bash
+curl -sS https://getcomposer.org/installer | php
+mv composer.phar /usr/local/bin/composer
+chmod +x /usr/local/bin/composer
+
+adduser deploy
+usermod -aG sudo deploy
+rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy
+
+ssh-keygen -t ed25519 -C "healthymartina-droplet" -f ~/.ssh/github_deploy
+chmod 600 ~/.ssh/github_deploy
+
+cat >> ~/.ssh/config <<EOF
+Host github.com
+  IdentityFile ~/.ssh/github_deploy
+  StrictHostKeyChecking no
+EOF
+```
+
+### 15.3 App checkout and bootstrap
+
+```bash
+mkdir -p /var/www/healthymartina
+cd /var/www/healthymartina
+git clone git@github.com:sethi-stack/healthymartina-laravel-backend.git api
+
+cd /var/www/healthymartina/api
+composer install --no-dev --optimize-autoloader --no-interaction
+cp .env.production.example .env
+php8.3 artisan key:generate
+
+chown -R www-data:www-data /var/www/healthymartina/api
+chmod -R 755 /var/www/healthymartina/api
+chmod -R 775 /var/www/healthymartina/api/storage
+chmod -R 775 /var/www/healthymartina/api/bootstrap/cache
+
+php8.3 artisan storage:link
+```
+
+### 15.4 Nginx and SSL
+
+```bash
+cp /var/www/healthymartina/api/scripts/nginx.conf \
+   /etc/nginx/sites-available/healthymartina-api
+ln -s /etc/nginx/sites-available/healthymartina-api \
+      /etc/nginx/sites-enabled/healthymartina-api
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d api-test.healthymartina.com
+certbot install --cert-name api-test.healthymartina.com
+```
+
+### 15.5 Database and migrations
+
+```bash
+mysql_secure_installation
+mysql -u root -p
+mysql -u root -p healthymartina < /tmp/prod-hm-app.sql
+
+cd /var/www/healthymartina/api
+php8.3 artisan migrate --force
+php8.3 artisan migrate:status
+php8.3 artisan tinker
+```
+
+### 15.6 One-time Laravel fixes
+
+```bash
+php8.3 artisan config:clear
+php8.3 artisan config:cache
+php8.3 artisan route:clear
+php8.3 artisan view:clear
+
+php8.3 artisan lang:publish
+
+sed -i 's/^APP_LOCALE=.*/APP_LOCALE=en/' /var/www/healthymartina/api/.env
+sed -i 's/^APP_FALLBACK_LOCALE=.*/APP_FALLBACK_LOCALE=en/' /var/www/healthymartina/api/.env
+
+php8.3 artisan vendor:publish --provider="Backpack\CRUD\BackpackServiceProvider" --tag=public --force
+php8.3 artisan basset:cache
+
+sudo systemctl restart php8.3-fpm
+sudo systemctl restart nginx
+```
+
+### 15.7 File and log checks
+
+```bash
+tail -50 /var/log/nginx/error.log
+tail -50 /var/log/nginx/access.log
+tail -n 40 /var/www/healthymartina/api/storage/logs/laravel.log
+openssl s_client -connect api-test.healthymartina.com:443 -servername api-test.healthymartina.com
+```
+
+---
+
+## 16. Files To Replicate On Prod
+
+Use this as the "source of truth" checklist when rebuilding or cloning the prod droplet.
+
+| Repo file / artifact | Destination on prod | Status | Notes |
+| -------------------- | ------------------- | ------ | ----- |
+| `laravel-backend-app/scripts/nginx.conf` | `/etc/nginx/sites-available/healthymartina-api` | Copy and edit | Replace `api.yourdomain.com` with the real host name, then symlink into `sites-enabled`. |
+| `laravel-backend-app/.env.production.example` | `/var/www/healthymartina/api/.env` | Copy and edit | Fill in DB, Sanctum, CORS, Spaces, and session values. Do not commit secrets. |
+| `laravel-backend-app/scripts/deploy.sh` | `/var/www/healthymartina/api/scripts/deploy.sh` | Keep in sync | Update `APP_DIR` and the PHP-FPM version to match the droplet. |
+| `laravel-backend-app/lang/` | `/var/www/healthymartina/api/lang/` | Commit to git | Needed for published language files and Backpack translations. |
+| `laravel-backend-app/resources/views/vendor/backpack/` | `/var/www/healthymartina/api/resources/views/vendor/backpack/` | Commit to git | Custom Backpack view overrides used by the admin UI. |
+| `laravel-backend-app/routes/backpack/custom.php` | `/var/www/healthymartina/api/routes/backpack/custom.php` | Commit to git | Backpack route customizations. |
+
+### Runtime-only items on the droplet
+
+These are created on the server and should not be copied from the repo as source files:
+
+- `/var/www/healthymartina/api/storage/`
+- `/var/www/healthymartina/api/bootstrap/cache/`
+- `/var/www/healthymartina/api/public/storage` symlink
+- `/etc/ssl/` and Certbot-managed Nginx SSL config
+- `/var/log/nginx/*` and `/var/www/healthymartina/api/storage/logs/*`
+
+### Recommended deployment order
+
+1. Copy the repo to `/var/www/healthymartina/api`
+2. Copy `.env.production.example` to `.env` and fill secrets
+3. Copy `scripts/nginx.conf` to `/etc/nginx/sites-available/healthymartina-api`
+4. Install dependencies with `composer install --no-dev --optimize-autoloader --no-interaction`
+5. Run `php8.3 artisan key:generate`, `storage:link`, and migrations
+6. Publish Backpack assets and language files
+7. Reload Nginx and PHP-FPM

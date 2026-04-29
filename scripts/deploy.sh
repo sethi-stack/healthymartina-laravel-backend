@@ -1,11 +1,13 @@
 #!/bin/bash
 # Server-side deploy script for HealthyMartina Laravel API
 # Run this on the Droplet, or triggered by the GitHub Action.
-# Usage: bash /var/www/healthymartina/laravel-backend-app/scripts/deploy.sh
+# Usage: bash /var/www/healthymartina/api/scripts/deploy.sh
 
 set -e
 
-APP_DIR="/var/www/healthymartina/laravel-backend-app"
+APP_DIR="/var/www/healthymartina/api"
+PHP_BIN="php8.3"
+PHP_FPM_SERVICE="php8.3-fpm"
 
 echo "==> Pulling latest code..."
 cd "$APP_DIR"
@@ -15,14 +17,14 @@ echo "==> Installing dependencies..."
 composer install --no-dev --optimize-autoloader --no-interaction
 
 echo "==> Running migrations..."
-php artisan migrate --force
+"$PHP_BIN" artisan migrate --force
 
 echo "==> Caching config / routes / views..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+"$PHP_BIN" artisan config:cache
+"$PHP_BIN" artisan route:cache
+"$PHP_BIN" artisan view:cache
 
 echo "==> Reloading PHP-FPM..."
-sudo systemctl reload php8.2-fpm
+sudo systemctl reload "$PHP_FPM_SERVICE"
 
 echo "==> Done. $(date)"
