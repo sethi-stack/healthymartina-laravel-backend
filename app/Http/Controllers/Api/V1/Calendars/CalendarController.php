@@ -277,8 +277,6 @@ class CalendarController extends Controller
 
         $mealnum = $validated['mealnum'];
         $daynum = $validated['daynum'];
-        $allDays = ['day_1', 'day_2', 'day_3', 'day_4', 'day_5', 'day_6', 'day_7'];
-        $removeDays = array_diff($allDays, $daynum);
 
         if ($validated['mealtype'] === 'main') {
             $mainSchedule = json_decode($calendar->main_schedule, true) ?? [];
@@ -290,28 +288,6 @@ class CalendarController extends Controller
                 $mainSchedule[$dayKey][$mealnum] = intval($validated['recetaid']);
                 $mainServings[$dayKey][$mealnum] = intval($validated['porciones']);
                 $mainLeftovers[$dayKey][$mealnum] = $validated['leftover'] ?? false;
-            }
-
-            // Remove recipe from unselected days (if it was previously assigned)
-            if ($removeDays) {
-                $sidesSchedule = json_decode($calendar->sides_schedule, true) ?? [];
-                $sidesServings = json_decode($calendar->sides_servings, true) ?? [];
-                $sidesLeftovers = json_decode($calendar->sides_leftovers, true) ?? [];
-
-                foreach ($removeDays as $dayKey) {
-                    if (isset($mainSchedule[$dayKey][$mealnum]) && $mainSchedule[$dayKey][$mealnum] == intval($validated['recetaid'])) {
-                        $mainSchedule[$dayKey][$mealnum] = null;
-                        $mainServings[$dayKey][$mealnum] = 1;
-                        $mainLeftovers[$dayKey][$mealnum] = null;
-                        $sidesSchedule[$dayKey][$mealnum] = null;
-                        $sidesServings[$dayKey][$mealnum] = 1;
-                        $sidesLeftovers[$dayKey][$mealnum] = null;
-                    }
-                }
-
-                $calendar->sides_schedule = json_encode($sidesSchedule);
-                $calendar->sides_servings = json_encode($sidesServings);
-                $calendar->sides_leftovers = json_encode($sidesLeftovers);
             }
 
             $calendar->main_schedule = json_encode($mainSchedule);
@@ -328,15 +304,6 @@ class CalendarController extends Controller
                 $sidesSchedule[$dayKey][$mealnum] = intval($validated['recetaid']);
                 $sidesServings[$dayKey][$mealnum] = intval($validated['porciones']);
                 $sidesLeftovers[$dayKey][$mealnum] = $validated['leftover'] ?? false;
-            }
-
-            // Remove recipe from unselected days
-            foreach ($removeDays as $dayKey) {
-                if (isset($sidesSchedule[$dayKey][$mealnum]) && $sidesSchedule[$dayKey][$mealnum] == intval($validated['recetaid'])) {
-                    $sidesSchedule[$dayKey][$mealnum] = null;
-                    $sidesServings[$dayKey][$mealnum] = 1;
-                    $sidesLeftovers[$dayKey][$mealnum] = null;
-                }
             }
 
             $calendar->sides_schedule = json_encode($sidesSchedule);
@@ -372,8 +339,79 @@ class CalendarController extends Controller
             'old_daynum' => 'nullable|string',
         ]);
 
-        // For update, use the same logic as addRecipe
-        return $this->addRecipe($request, $id);
+        $mealnum = $validated['mealnum'];
+        $selectedDays = $validated['daynum'];
+        $allDays = ['day_1', 'day_2', 'day_3', 'day_4', 'day_5', 'day_6', 'day_7'];
+        $removeDays = array_diff($allDays, $selectedDays);
+        $recipeId = intval($validated['recetaid']);
+
+        if ($validated['mealtype'] === 'main') {
+            $mainSchedule = json_decode($calendar->main_schedule, true) ?? [];
+            $mainServings = json_decode($calendar->main_servings, true) ?? [];
+            $mainLeftovers = json_decode($calendar->main_leftovers, true) ?? [];
+            $sidesSchedule = json_decode($calendar->sides_schedule, true) ?? [];
+            $sidesServings = json_decode($calendar->sides_servings, true) ?? [];
+            $sidesLeftovers = json_decode($calendar->sides_leftovers, true) ?? [];
+
+            // Apply update to selected days
+            foreach ($selectedDays as $dayKey) {
+                $mainSchedule[$dayKey][$mealnum] = $recipeId;
+                $mainServings[$dayKey][$mealnum] = intval($validated['porciones']);
+                $mainLeftovers[$dayKey][$mealnum] = $validated['leftover'] ?? false;
+            }
+
+            // Unchecked days should remove this main recipe from that meal slot
+            foreach ($removeDays as $dayKey) {
+                if (isset($mainSchedule[$dayKey][$mealnum]) && intval($mainSchedule[$dayKey][$mealnum]) === $recipeId) {
+                    $mainSchedule[$dayKey][$mealnum] = null;
+                    $mainServings[$dayKey][$mealnum] = 1;
+                    $mainLeftovers[$dayKey][$mealnum] = null;
+                    // Side is tied to main for that slot
+                    $sidesSchedule[$dayKey][$mealnum] = null;
+                    $sidesServings[$dayKey][$mealnum] = 1;
+                    $sidesLeftovers[$dayKey][$mealnum] = null;
+                }
+            }
+
+            $calendar->main_schedule = json_encode($mainSchedule);
+            $calendar->main_servings = json_encode($mainServings);
+            $calendar->main_leftovers = json_encode($mainLeftovers);
+            $calendar->sides_schedule = json_encode($sidesSchedule);
+            $calendar->sides_servings = json_encode($sidesServings);
+            $calendar->sides_leftovers = json_encode($sidesLeftovers);
+        } else {
+            $sidesSchedule = json_decode($calendar->sides_schedule, true) ?? [];
+            $sidesServings = json_decode($calendar->sides_servings, true) ?? [];
+            $sidesLeftovers = json_decode($calendar->sides_leftovers, true) ?? [];
+
+            // Apply update to selected days
+            foreach ($selectedDays as $dayKey) {
+                $sidesSchedule[$dayKey][$mealnum] = $recipeId;
+                $sidesServings[$dayKey][$mealnum] = intval($validated['porciones']);
+                $sidesLeftovers[$dayKey][$mealnum] = $validated['leftover'] ?? false;
+            }
+
+            // Unchecked days should remove this side recipe from that meal slot
+            foreach ($removeDays as $dayKey) {
+                if (isset($sidesSchedule[$dayKey][$mealnum]) && intval($sidesSchedule[$dayKey][$mealnum]) === $recipeId) {
+                    $sidesSchedule[$dayKey][$mealnum] = null;
+                    $sidesServings[$dayKey][$mealnum] = 1;
+                    $sidesLeftovers[$dayKey][$mealnum] = null;
+                }
+            }
+
+            $calendar->sides_schedule = json_encode($sidesSchedule);
+            $calendar->sides_servings = json_encode($sidesServings);
+            $calendar->sides_leftovers = json_encode($sidesLeftovers);
+        }
+
+        $calendar->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Recipe updated successfully',
+            'calendar' => new CalendarResource($calendar),
+        ]);
     }
 
     /**
@@ -436,4 +474,3 @@ class CalendarController extends Controller
         ]);
     }
 }
-

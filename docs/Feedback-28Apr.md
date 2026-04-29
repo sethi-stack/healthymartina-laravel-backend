@@ -21,7 +21,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - “View recipe details” leads to 404.
    - Same 404 from 3-dot calendar menu.
 
-3. **Calendar destructive grouped behavior / data integrity**
+3. **Calendar destructive grouped behavior / data integrity** - `DONE` (2026-04-29)
    - Editing servings on one day affects other days in same meal slot.
    - If not revalidated in full-week flow, entries on other days get deleted.
    - Same issue with leftovers.
@@ -125,6 +125,11 @@ Start with:
   - Added robust recipe detail routing fallback by ID (`/receta-id/:id`) when slug is unavailable.
   - Calendar menu “Ver receta” now opens by slug when present, otherwise by ID.
   - Add-meal “Ver detalles de receta” link now uses same slug/ID fallback.
+- 2026-04-29: `P0.3` completed.
+  - Fixed destructive grouped calendar behavior in update flow.
+  - In edit popup, day uncheck now removes recipe from unchecked days as expected.
+  - Prevented stale selected calendar mismatch when switching calendars.
+  - Reduced calendar edit over-fetch by tightening query invalidation and cache updates.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.
