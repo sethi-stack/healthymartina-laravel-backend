@@ -1,0 +1,127 @@
+# Feedback - 28 Apr
+
+## Goal
+Track initial QA feedback, prioritize by criticality, and execute fixes one at a time with testing checkpoints between each implementation.
+
+## Priority Legend
+- `P0` Critical bug or blocker (core flow broken, data loss, major 404, key CTA not working)
+- `P1` High bug / missing expected feature (important flow degraded but not fully blocked)
+- `P2` Enhancement / performance / polish (works but needs optimization or completion)
+- `P3` Future scope (known not ready yet)
+
+## Prioritized Backlog
+
+### P0 - Critical (fix first)
+1. **Recipe view buttons not working** - `DONE` (2026-04-29)
+   - Add to calendar button does not work.
+   - Export recipe button does not work.
+   - Add comment button does not work.
+
+2. **Recipe details navigation broken**
+   - “View recipe details” leads to 404.
+   - Same 404 from 3-dot calendar menu.
+
+3. **Calendar destructive grouped behavior / data integrity**
+   - Editing servings on one day affects other days in same meal slot.
+   - If not revalidated in full-week flow, entries on other days get deleted.
+   - Same issue with leftovers.
+   - Deleting one instance from menu deletes all matching instances across days/slot.
+   - Manually adding one slot can delete existing entries in same slot on other days.
+
+4. **Drag and drop cannot complete move**
+   - Item returns to original position after drop.
+
+5. **Grocery list core actions unavailable**
+   - Cannot add ingredients.
+   - Cannot validate existing list items.
+   - Cannot export/send grocery list by email.
+
+### P1 - High
+1. **Recipe content missing in detail**
+   - Ingredients and tips not showing in recipes.
+
+2. **Main recipe library calendar action unavailable** - `DONE` (2026-04-29)
+   - Cannot add recipes to calendar from main library.
+
+3. **Bookmark action not working**
+   - Clicking bookmark does nothing.
+
+4. **Filter logic bug (specific combination)**
+   - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
+
+5. **Filter state is lost on back navigation**
+   - Open recipe and return to list resets filters.
+   - Also blocks reliable nutrition-filter validation across multiple recipes.
+
+6. **Calendar recipe menu limitation**
+   - From 3-dot menu, cannot mark recipe as leftovers.
+
+### P2 - Enhancement / Performance / Partial readiness
+1. **Sub-recipes not enabled yet** (feature incomplete / readiness gap).
+2. **Calendar add recipe feels slower than previous version** (performance regression suspicion).
+3. **Side/leftover actions feel slow before eventual load** (latency optimization).
+4. **Portions button not responding** (servings/portions toggle behavior needs review).
+5. **Nutrition insights click does nothing** (feature not responsive yet).
+6. **Calendar export format/content incomplete**
+   - Missing cover and recipes in export.
+   - Export format not yet matching target format.
+
+### P3 - Future
+1. **Plans section not ready yet** (explicitly deferred).
+
+## Execution Plan (One-at-a-time with testing)
+
+### Phase 1 - Stabilize blockers (`P0`)
+1. Fix recipe view CTA actions (add to calendar, export, add comment).
+2. Fix recipe details routes (all entry points, including 3-dot menu).
+3. Fix calendar grouped update/delete logic to enforce per-day instance isolation.
+4. Fix drag-and-drop persistence/mutation update.
+5. Fix grocery list core actions (add, validate, export/email).
+
+Testing checkpoint after **each** item:
+- Implement one item.
+- Hand over for your test.
+- Continue only after your confirmation.
+
+### Phase 2 - Core UX correctness (`P1`)
+1. Restore ingredients/tips rendering in recipe detail.
+2. Re-enable add-to-calendar from main library.
+3. Fix bookmark persistence/action.
+4. Correct filter combination logic for tags + include/exclude ingredients.
+5. Persist filter state across recipe open/back navigation.
+6. Re-check nutrition filters once state persistence is fixed.
+7. Enable leftovers from calendar 3-dot menu.
+
+Testing checkpoint after **each** item.
+
+### Phase 3 - Performance and incomplete features (`P2`)
+1. Profile and optimize calendar add recipe / side / leftovers latency.
+2. Fix portions toggle behavior.
+3. Enable nutrition insights interaction or gate as “coming soon”.
+4. Complete calendar export (cover + recipes + target format parity).
+5. Review sub-recipe enablement scope and rollout.
+
+Testing checkpoint after **each** item.
+
+### Phase 4 - Deferred (`P3`)
+1. Plan section readiness after higher-priority stabilization is complete.
+
+## Implementation Order For Next Steps
+Start with:
+1. Recipe details routes (`P0.2`) - `NEXT`
+2. Calendar grouped update/delete logic (`P0.3`)
+3. Drag and drop persistence (`P0.4`)
+4. Grocery list core actions (`P0.5`)
+
+## Progress Log
+- 2026-04-29: `P0.1` completed.
+  - Recipe detail add-to-calendar wired to legacy `AddMealModal` flow.
+  - Recipe export wired to `/recipes/{id}/pdf`.
+  - Comment action/popup flow restored and popup UI spacing fixed.
+- 2026-04-29: `P1.2` completed.
+  - Main recipe library add-to-calendar now opens legacy `AddMealModal` with selected recipe preloaded.
+  - Stored calendar selection now validated against current calendar list, with safe fallback + persistence.
+
+## Notes
+- This document is intentionally execution-oriented so we can track status quickly.
+- As we complete each item, we should add a status marker (`TODO`, `IN PROGRESS`, `DONE`, `NEEDS RETEST`) and timestamp.
