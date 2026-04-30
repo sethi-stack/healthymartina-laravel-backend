@@ -49,7 +49,7 @@ Use this section as the quickest reference to client-reported issues.
 - `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers/view details/delete scopes `SOLVED` (`P1.6`/`P0.2`/`P0.3`).
 - `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
 - `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
-- `21` Nutrition insights unresponsive → `P2.5` → `OPEN`.
+- `21` Nutrition insights unresponsive → `P2.5` → `SOLVED` (`DONE`, 2026-04-30).
 - `22` Calendar export incomplete/mismatch → `P2.6` → `OPEN`.
 - `23` Grocery list core actions unavailable → `P0.5` → `NEEDS RETEST`.
 - `24` Plans section not ready → `P3.1` → `DEFERRED`.
@@ -238,10 +238,14 @@ Start with:
   - Added clickable `Ración` control next to servings text in calendar update modal for main/side recipes.
   - Updated calendar cell UX: clicking side recipe now opens `Complemento` tab first.
   - Fixed calendar card height regression while preserving click behavior.
+- 2026-04-30: `P2.5` completed.
+  - Implemented nutrition insights click interaction in calendar nutrition row.
+  - Added day nutrition details modal and wired per-day click to open it.
+  - Modal reflects current view mode (`statistics` amounts / `macros` percentages).
 
 ## Active Next Item
-- `P2.2` **Calendar add recipe feels slower than previous version** - `IN PROGRESS` (2026-04-30)
-  - Start profiling add-recipe flow and reduce perceived/actual latency (request path, query invalidation, and loading UX).
+- `P2.6` **Calendar export format/content incomplete** - `IN PROGRESS` (2026-04-30)
+  - Verify and complete export parity: cover + recipes + final target format.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.
