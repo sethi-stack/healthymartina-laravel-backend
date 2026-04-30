@@ -473,4 +473,54 @@ class CalendarController extends Controller
             'calendar' => new CalendarResource($calendar),
         ]);
     }
+
+    /**
+     * Update ración/scale for a specific calendar meal slot.
+     */
+    public function updateRacion(Request $request, int $id): JsonResponse
+    {
+        $calendar = Auth::user()->calendars()->findOrFail($id);
+
+        $validated = $request->validate([
+            'meal_type' => 'required|in:main,side',
+            'meal_id' => 'required|string',
+            'day_id' => 'required|string',
+            'serving' => 'required|numeric|min:0.001|max:26',
+            'calendar_scale' => 'required|numeric|min:0.1|max:10',
+        ]);
+
+        $mealType = $validated['meal_type'];
+        $mealId = $validated['meal_id'];
+        $dayId = $validated['day_id'];
+        $serving = floatval($validated['serving']);
+        $calendarScale = floatval($validated['calendar_scale']);
+
+        if ($mealType === 'main') {
+            $mainRacion = json_decode($calendar->main_racion, true) ?? [];
+            $mainServings = json_decode($calendar->main_servings, true) ?? [];
+
+            $mainRacion[$dayId][$mealId] = $calendarScale;
+            $mainServings[$dayId][$mealId] = $serving;
+
+            $calendar->main_racion = json_encode($mainRacion);
+            $calendar->main_servings = json_encode($mainServings);
+        } else {
+            $sidesRacion = json_decode($calendar->sides_racion, true) ?? [];
+            $sidesServings = json_decode($calendar->sides_servings, true) ?? [];
+
+            $sidesRacion[$dayId][$mealId] = $calendarScale;
+            $sidesServings[$dayId][$mealId] = $serving;
+
+            $calendar->sides_racion = json_encode($sidesRacion);
+            $calendar->sides_servings = json_encode($sidesServings);
+        }
+
+        $calendar->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ración actualizada correctamente',
+            'calendar' => new CalendarResource($calendar),
+        ]);
+    }
 }

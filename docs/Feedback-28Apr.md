@@ -36,17 +36,17 @@ Use this section as the quickest reference to client-reported issues.
 - `5` Recipe view export broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
 - `6` Add comment broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
 - `7` Tags + ingredient-count/time works → Behavior note, no bug ticket needed.
-- `8` Tags + include/exclude returns zero unexpectedly → `P1.4` → `IN PROGRESS` (2026-04-30).
-- `9` Filter resets on recipe open/back → `P1.5` → `OPEN`.
-- `10` Nutrition-filter validation blocked by reset → Depends on `P1.5` + `P1.6` → `OPEN`.
+- `8` Tags + include/exclude returns zero unexpectedly → `P1.4` → `SOLVED` (`DONE`, 2026-04-30).
+- `9` Filter resets on recipe open/back → `P1.5` → `SOLVED` (`DONE`, 2026-04-30).
+- `10` Nutrition-filter validation blocked by reset → `P1.6`/`P1.5` blockers `SOLVED`; full nutrition-mix QA still recommended.
 - `11` Bookmark button not working → `P1.3` → `SOLVED` (`DONE`, 2026-04-29; UX follow-up 2026-04-30).
 - `12` Calendar add feels slower than previous → `P2.2` → `OPEN`.
 - `13` Servings grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-04-29; needs QA confidence).
 - `14` Leftovers grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-04-29; needs QA confidence).
-- `15` Portions button not responding → `P2.4` → `OPEN`.
+- `15` Portions button not responding → `P2.4` → `SOLVED` (`DONE`, 2026-04-30).
 - `16` Side/leftovers latency → `P2.3` → `OPEN`.
 - `17` View recipe details 404 → `P0.2` → `SOLVED` (`DONE`, 2026-04-29).
-- `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers=`P1.6` `OPEN`; view details/delete scope=`P0.2/P0.3` `SOLVED`.
+- `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers/view details/delete scopes `SOLVED` (`P1.6`/`P0.2`/`P0.3`).
 - `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
 - `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
 - `21` Nutrition insights unresponsive → `P2.5` → `OPEN`.
@@ -106,11 +106,11 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 4. **Filter logic bug (specific combination)** - `DONE` (2026-04-30)
    - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
 
-5. **Filter state is lost on back navigation**
+5. **Filter state is lost on back navigation** - `DONE` (2026-04-30)
    - Open recipe and return to list resets filters.
    - Also blocks reliable nutrition-filter validation across multiple recipes.
 
-6. **Calendar recipe menu limitation**
+6. **Calendar recipe menu limitation** - `DONE` (2026-04-30)
    - From 3-dot menu, cannot mark recipe as leftovers.
 
 ### P2 - Enhancement / Performance / Partial readiness
@@ -223,11 +223,25 @@ Start with:
   - Aligned advanced filter ingredient SQL constraints with legacy semantics in `RecipeFilterService` (`ingrediente_id` in include/exclude nested conditions) to address zero-result regressions on tags + include/exclude combinations.
   - QA retest passed on target combinations.
   - Commit: `17b7b03` (laravel-backend-app).
+- 2026-04-30: `P1.5` completed.
+  - Persisted Recetario filters in URL + `localStorage` so filter state survives back navigation and page reloads until explicit clear (`Sin filtros`).
+  - Added legacy query fallback hydration for compatibility with old filter links.
+  - Commit: `18fde96` (react-front-app).
+- 2026-04-30: `P1.6` completed.
+  - Implemented calendar 3-dot menu leftover toggle from `CalendarCell` for main and side recipes.
+  - Wired toggle mutation to calendar update endpoint and cache invalidation.
+  - QA retest passed.
+  - Commit: `050d7db` (react-front-app).
+- 2026-04-30: `P2.4` completed.
+  - Added API endpoint `POST /api/v1/calendars/{id}/racion` to persist ración updates per meal/day.
+  - Added React client method and wired update popup `Ración` trigger to this endpoint.
+  - Added clickable `Ración` control next to servings text in calendar update modal for main/side recipes.
+  - Updated calendar cell UX: clicking side recipe now opens `Complemento` tab first.
+  - Fixed calendar card height regression while preserving click behavior.
 
 ## Active Next Item
-- `P1.5` **Filter state is lost on back navigation** - `IN PROGRESS` (2026-04-30)
-  - Open recipe and return to list resets filters.
-  - Blocks reliable nutrition-filter validation across multiple recipes.
+- `P2.2` **Calendar add recipe feels slower than previous version** - `IN PROGRESS` (2026-04-30)
+  - Start profiling add-recipe flow and reduce perceived/actual latency (request path, query invalidation, and loading UX).
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.

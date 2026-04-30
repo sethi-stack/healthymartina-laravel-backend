@@ -131,6 +131,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/{id}/recipes', [CalendarController::class, 'addRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.add');
             Route::put('/{id}/recipes', [CalendarController::class, 'updateRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.update');
             Route::delete('/{id}/recipes', [CalendarController::class, 'removeRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.remove');
+            Route::post('/{id}/racion', [CalendarController::class, 'updateRacion'])->where('id', '[0-9]+')->name('api.v1.calendars.racion.update');
             
             // Lista de Ingredientes (Calendar ingredient lists)
             Route::prefix('{calendarId}/lista')->group(function () {
