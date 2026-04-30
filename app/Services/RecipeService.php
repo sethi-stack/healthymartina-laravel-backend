@@ -6,10 +6,24 @@ use App\Models\Receta;
 use App\Models\Bookmark;
 use App\Models\Reaction;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Collection;
 
 class RecipeService
 {
+    private function getBookmarkRecipeKey(): ?string
+    {
+        if (Schema::hasColumn('bookmarks', 'recipe_id')) {
+            return 'recipe_id';
+        }
+
+        if (Schema::hasColumn('bookmarks', 'receta_id')) {
+            return 'receta_id';
+        }
+
+        return null;
+    }
+
     /**
      * Get recipes with advanced filtering and relationships.
      */
@@ -70,12 +84,13 @@ class RecipeService
     public function isBookmarked(int $recipeId, ?int $userId = null): bool
     {
         $userId = $userId ?? Auth::id();
+        $bookmarkRecipeKey = $this->getBookmarkRecipeKey();
         
-        if (!$userId) {
+        if (!$userId || !$bookmarkRecipeKey) {
             return false;
         }
 
-        return Bookmark::where('receta_id', $recipeId)
+        return Bookmark::where($bookmarkRecipeKey, $recipeId)
             ->where('user_id', $userId)
             ->exists();
     }
@@ -86,8 +101,13 @@ class RecipeService
     public function toggleBookmark(int $recipeId, ?int $userId = null): array
     {
         $userId = $userId ?? Auth::id();
+        $bookmarkRecipeKey = $this->getBookmarkRecipeKey();
 
-        $bookmark = Bookmark::where('receta_id', $recipeId)
+        if (!$bookmarkRecipeKey) {
+            return ['bookmarked' => false, 'message' => 'Bookmark recipe key not configured'];
+        }
+
+        $bookmark = Bookmark::where($bookmarkRecipeKey, $recipeId)
             ->where('user_id', $userId)
             ->first();
 
@@ -96,10 +116,7 @@ class RecipeService
             return ['bookmarked' => false, 'message' => 'Bookmark removed'];
         }
 
-        Bookmark::create([
-            'receta_id' => $recipeId,
-            'user_id' => $userId,
-        ]);
+        Bookmark::create([$bookmarkRecipeKey => $recipeId, 'user_id' => $userId]);
 
         return ['bookmarked' => true, 'message' => 'Bookmark added'];
     }
@@ -110,9 +127,17 @@ class RecipeService
     public function getUserBookmarks(?int $userId = null)
     {
         $userId = $userId ?? Auth::id();
+        $bookmarkRecipeKey = $this->getBookmarkRecipeKey();
 
-        return Receta::whereHas('bookmarks', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
+        if (!$bookmarkRecipeKey) {
+            return Receta::query()->whereRaw('1 = 0');
+        }
+
+        return Receta::whereIn('id', function ($query) use ($userId, $bookmarkRecipeKey) {
+            $query->select($bookmarkRecipeKey)
+                ->from('bookmarks')
+                ->where('user_id', $userId)
+                ->whereNull('deleted_at');
         })->with(['tags']);
     }
 
@@ -178,7 +203,10 @@ class RecipeService
             ->where('is_like', false)
             ->count();
 
-        $bookmarks = Bookmark::where('receta_id', $recipeId)->count();
+        $bookmarkRecipeKey = $this->getBookmarkRecipeKey();
+        $bookmarks = $bookmarkRecipeKey
+            ? Bookmark::where($bookmarkRecipeKey, $recipeId)->count()
+            : 0;
 
         $comments = $recipe->comments()->count();
 
@@ -227,18 +255,30 @@ class RecipeService
     public function getPopularRecipes(int $limit = 10, int $days = 30)
     {
         $since = now()->subDays($days);
+        $bookmarkRecipeKey = $this->getBookmarkRecipeKey();
 
-        return Receta::withCount([
-            'reactions' => function ($query) use ($since) {
-                $query->where('created_at', '>=', $since);
+        $query = Receta::withCount([
+            'reactions' => function ($q) use ($since) {
+                $q->where('created_at', '>=', $since);
             },
-            'bookmarks' => function ($query) use ($since) {
-                $query->where('created_at', '>=', $since);
-            },
-        ])
-        ->orderByDesc('reactions_count')
-        ->orderByDesc('bookmarks_count')
-        ->limit($limit)
-        ->get();
+        ]);
+
+        if ($bookmarkRecipeKey) {
+            $query->addSelect([
+                'bookmarks_count' => Bookmark::query()
+                    ->selectRaw('count(*)')
+                    ->whereColumn("bookmarks.{$bookmarkRecipeKey}", 'recetas.id')
+                    ->where('bookmarks.created_at', '>=', $since)
+                    ->whereNull('bookmarks.deleted_at'),
+            ]);
+        } else {
+            $query->selectRaw('recetas.*, 0 as bookmarks_count');
+        }
+
+        return $query
+            ->orderByDesc('reactions_count')
+            ->orderByDesc('bookmarks_count')
+            ->limit($limit)
+            ->get();
     }
 }
