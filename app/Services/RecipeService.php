@@ -75,7 +75,7 @@ class RecipeService
             return false;
         }
 
-        return Bookmark::where('recipe_id', $recipeId)
+        return Bookmark::where('receta_id', $recipeId)
             ->where('user_id', $userId)
             ->exists();
     }
@@ -87,7 +87,7 @@ class RecipeService
     {
         $userId = $userId ?? Auth::id();
 
-        $bookmark = Bookmark::where('recipe_id', $recipeId)
+        $bookmark = Bookmark::where('receta_id', $recipeId)
             ->where('user_id', $userId)
             ->first();
 
@@ -97,7 +97,7 @@ class RecipeService
         }
 
         Bookmark::create([
-            'recipe_id' => $recipeId,
+            'receta_id' => $recipeId,
             'user_id' => $userId,
         ]);
 
@@ -178,7 +178,7 @@ class RecipeService
             ->where('is_like', false)
             ->count();
 
-        $bookmarks = Bookmark::where('recipe_id', $recipeId)->count();
+        $bookmarks = Bookmark::where('receta_id', $recipeId)->count();
 
         $comments = $recipe->comments()->count();
 
@@ -242,4 +242,3 @@ class RecipeService
         ->get();
     }
 }
-

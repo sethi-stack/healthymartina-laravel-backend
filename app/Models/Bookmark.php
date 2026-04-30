@@ -21,7 +21,7 @@ class Bookmark extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['user_id', 'recipe_id', 'filters', 'name'];
+    protected $fillable = ['user_id', 'receta_id', 'filters', 'name'];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
@@ -47,7 +47,7 @@ class Bookmark extends Model
 
     public function receta()
     {
-        return $this->belongsTo('App\Models\Receta', 'recipe_id');
+        return $this->belongsTo('App\Models\Receta', 'receta_id');
     }
 
     /*

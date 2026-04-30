@@ -823,7 +823,7 @@ class Receta extends Model
 
     public function bookmarks()
     {
-        return $this->hasMany('App\Models\Bookmark', 'recipe_id');
+        return $this->hasMany('App\Models\Bookmark', 'receta_id');
     }
 
     /*
