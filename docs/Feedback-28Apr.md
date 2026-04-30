@@ -103,7 +103,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Fixed frontend bookmark action to use `/recipes/bookmarks` endpoint instead of sending an unused query flag to `/recipes`.
    - Added per-recipe bookmark toggle in recipe card 3-dot menu (`Guardar/Quitar marcador`) wired to `POST /recipes/{id}/bookmark`.
 
-4. **Filter logic bug (specific combination)** - `IN PROGRESS` (2026-04-30)
+4. **Filter logic bug (specific combination)** - `DONE` (2026-04-30)
    - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
 
 5. **Filter state is lost on back navigation**
@@ -219,14 +219,15 @@ Start with:
   - Fixed active/hover visual states and removed bookmark active highlight by request (only filter remains stateful).
   - Fixed Recetario options row overflow/line bleed via scoped spacing/overflow corrections.
   - Commit: `07ca766` (react-front-app).
-- 2026-04-30: `P1.4` implementation pass started.
+- 2026-04-30: `P1.4` completed.
   - Aligned advanced filter ingredient SQL constraints with legacy semantics in `RecipeFilterService` (`ingrediente_id` in include/exclude nested conditions) to address zero-result regressions on tags + include/exclude combinations.
-  - File updated: `laravel-backend-app/app/Services/RecipeFilterService.php`.
-  - Status: awaiting QA retest on failing combinations.
+  - QA retest passed on target combinations.
+  - Commit: `17b7b03` (laravel-backend-app).
 
 ## Active Next Item
-- `P1.4` **Filter logic bug (specific combination)** - `IN PROGRESS` (2026-04-30)
-  - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
+- `P1.5` **Filter state is lost on back navigation** - `IN PROGRESS` (2026-04-30)
+  - Open recipe and return to list resets filters.
+  - Blocks reliable nutrition-filter validation across multiple recipes.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.
