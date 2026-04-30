@@ -45,8 +45,8 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 2. **Main recipe library calendar action unavailable** - `DONE` (2026-04-29)
    - Cannot add recipes to calendar from main library.
 
-3. **Bookmark action not working**
-   - Clicking bookmark does nothing.
+3. **Bookmark action not working** - `DONE` (2026-04-29)
+   - Fixed frontend bookmark action to use `/recipes/bookmarks` endpoint instead of sending an unused query flag to `/recipes`.
 
 4. **Filter logic bug (specific combination)**
    - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
@@ -160,8 +160,8 @@ Start with:
   - Commit: `0f967be` (react-front-app).
 
 ## Active Next Item
-- `P1.3` **Bookmark action not working** - `NEXT`
-  - Clicking bookmark does nothing.
+- `P1.4` **Filter logic bug (specific combination)** - `NEXT`
+  - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.
