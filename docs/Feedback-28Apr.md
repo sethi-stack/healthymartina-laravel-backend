@@ -47,6 +47,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 
 3. **Bookmark action not working** - `DONE` (2026-04-29)
    - Fixed frontend bookmark action to use `/recipes/bookmarks` endpoint instead of sending an unused query flag to `/recipes`.
+   - Added per-recipe bookmark toggle in recipe card 3-dot menu (`Guardar/Quitar marcador`) wired to `POST /recipes/{id}/bookmark`.
 
 4. **Filter logic bug (specific combination)**
    - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
