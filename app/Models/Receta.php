@@ -821,6 +821,11 @@ class Receta extends Model
         return $this->belongsToMany('App\Models\Comment', 'comment_receta', 'receta_id', 'comment_id');
     }
 
+    public function bookmarks()
+    {
+        return $this->hasMany('App\Models\Bookmark', 'recipe_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
