@@ -1,5 +1,59 @@
 # Feedback - 28 Apr
 
+## Client Issues List (Primary Reference)
+Use this section as the quickest reference to client-reported issues.
+
+1. When opening a recipe, sub-recipes are not enabled yet.
+2. Ingredients and tips are not showing in recipes.
+3. Cannot add recipes to calendar from main recipe library.
+4. From recipe view, “add to calendar” button not working.
+5. From recipe view, “export recipe” button not working.
+6. “Add comment” button at bottom not working.
+7. Tags + number of ingredients + time works.
+8. Tags + include ingredients OR tags + exclude ingredients drops to zero results unexpectedly.
+9. If a filter is applied, opening a recipe and returning resets filters.
+10. Nutrition filter combinations are hard to validate because filters reset on back navigation.
+11. Bookmark button not working.
+12. Adding recipe to calendar feels slower than original version.
+13. Editing servings on one day affects/deletes same-slot entries on other days unless revalidated.
+14. Same grouped-delete behavior happens with leftovers.
+15. Portions button (“servings/portions”) is not responding.
+16. Adding side or leftovers is very slow before eventual load.
+17. “View recipe details” leads to 404.
+18. Calendar 3-dot menu issues: cannot mark leftovers, “view details” 404, delete removes all same-slot instances across days.
+19. Drag can start, but drop reverts to original place.
+20. Manually adding one slot can delete same-slot entries on other days if not revalidated in full-week view.
+21. Nutrition insights click does nothing.
+22. Calendar export missing cover/recipes and format mismatch.
+23. Grocery list core actions unavailable (add/validate/export/email).
+24. Plans section not ready yet (later scope).
+
+## Client List Mapping (Solved vs Open)
+- `1` Sub-recipes not enabled → `P2.1` → `OPEN` (known incomplete feature).
+- `2` Ingredients/tips missing → `P1.1` → `SOLVED` (`DONE`, 2026-04-29).
+- `3` Main library add-to-calendar unavailable → `P1.2` → `SOLVED` (`DONE`, 2026-04-29).
+- `4` Recipe view add-to-calendar broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
+- `5` Recipe view export broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
+- `6` Add comment broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
+- `7` Tags + ingredient-count/time works → Behavior note, no bug ticket needed.
+- `8` Tags + include/exclude returns zero unexpectedly → `P1.4` → `IN PROGRESS` (2026-04-30).
+- `9` Filter resets on recipe open/back → `P1.5` → `OPEN`.
+- `10` Nutrition-filter validation blocked by reset → Depends on `P1.5` + `P1.6` → `OPEN`.
+- `11` Bookmark button not working → `P1.3` → `SOLVED` (`DONE`, 2026-04-29; UX follow-up 2026-04-30).
+- `12` Calendar add feels slower than previous → `P2.2` → `OPEN`.
+- `13` Servings grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-04-29; needs QA confidence).
+- `14` Leftovers grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-04-29; needs QA confidence).
+- `15` Portions button not responding → `P2.4` → `OPEN`.
+- `16` Side/leftovers latency → `P2.3` → `OPEN`.
+- `17` View recipe details 404 → `P0.2` → `SOLVED` (`DONE`, 2026-04-29).
+- `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers=`P1.6` `OPEN`; view details/delete scope=`P0.2/P0.3` `SOLVED`.
+- `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
+- `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
+- `21` Nutrition insights unresponsive → `P2.5` → `OPEN`.
+- `22` Calendar export incomplete/mismatch → `P2.6` → `OPEN`.
+- `23` Grocery list core actions unavailable → `P0.5` → `NEEDS RETEST`.
+- `24` Plans section not ready → `P3.1` → `DEFERRED`.
+
 ## Goal
 Track initial QA feedback, prioritize by criticality, and execute fixes one at a time with testing checkpoints between each implementation.
 
@@ -49,7 +103,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Fixed frontend bookmark action to use `/recipes/bookmarks` endpoint instead of sending an unused query flag to `/recipes`.
    - Added per-recipe bookmark toggle in recipe card 3-dot menu (`Guardar/Quitar marcador`) wired to `POST /recipes/{id}/bookmark`.
 
-4. **Filter logic bug (specific combination)**
+4. **Filter logic bug (specific combination)** - `IN PROGRESS` (2026-04-30)
    - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
 
 5. **Filter state is lost on back navigation**
@@ -159,9 +213,19 @@ Start with:
   - Fixed instruction line-merge formatting from split backend lines.
   - Scoped conflicting global `.options` styles to stop cross-page CSS leakage into recipe detail tabs.
   - Commit: `0f967be` (react-front-app).
+- 2026-04-30: Recetario filter/bookmark UX follow-up completed.
+  - Added reusable `IconActionButton` and migrated Recetario action buttons to `react-icons`.
+  - Added filter bookmarks modal flow (save / apply / delete) aligned with legacy behavior.
+  - Fixed active/hover visual states and removed bookmark active highlight by request (only filter remains stateful).
+  - Fixed Recetario options row overflow/line bleed via scoped spacing/overflow corrections.
+  - Commit: `07ca766` (react-front-app).
+- 2026-04-30: `P1.4` implementation pass started.
+  - Aligned advanced filter ingredient SQL constraints with legacy semantics in `RecipeFilterService` (`ingrediente_id` in include/exclude nested conditions) to address zero-result regressions on tags + include/exclude combinations.
+  - File updated: `laravel-backend-app/app/Services/RecipeFilterService.php`.
+  - Status: awaiting QA retest on failing combinations.
 
 ## Active Next Item
-- `P1.4` **Filter logic bug (specific combination)** - `NEXT`
+- `P1.4` **Filter logic bug (specific combination)** - `IN PROGRESS` (2026-04-30)
   - Tags + include ingredients OR tags + exclude ingredients returns zero unexpectedly.
 
 ## Notes

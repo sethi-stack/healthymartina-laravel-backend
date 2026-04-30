@@ -96,13 +96,13 @@ class RecipeFilterService
         // candidate pool small and avoid recursion-heavy scans across the entire table.
         if (isset($filters['ingrediente_excluir']) && !empty($filters['ingrediente_excluir'])) {
             $query->whereDoesntHave('recetaInstruccionReceta.instruccion.ingrediente', function (Builder $query) use ($filters) {
-                $query->whereIn('id', $filters['ingrediente_excluir']);
+                $query->whereIn('ingrediente_id', $filters['ingrediente_excluir']);
             });
         }
 
         if (isset($filters['ingrediente_incluir']) && !empty($filters['ingrediente_incluir'])) {
             $query->whereHas('recetaInstruccionReceta.instruccion.ingrediente', function (Builder $query) use ($filters) {
-                $query->whereIn('id', $filters['ingrediente_incluir']);
+                $query->whereIn('ingrediente_id', $filters['ingrediente_incluir']);
             });
         }
 
