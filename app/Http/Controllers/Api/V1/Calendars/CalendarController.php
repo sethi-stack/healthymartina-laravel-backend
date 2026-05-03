@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Calendars;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Calendar\CalendarResource;
 use App\Models\Calendar;
+use App\Models\Plan;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -220,7 +221,27 @@ class CalendarController extends Controller
      */
     public function getNutritionInfo(Request $request, int $id, string $dayId): JsonResponse
     {
-        $calendar = Auth::user()->calendars()->findOrFail($id);
+        $calendar = Auth::user()->calendars()->find($id);
+
+        // Allow read-only nutrition access for plan template calendars
+        // when user is allowed to view that plan.
+        if (!$calendar && $request->filled('plan_id')) {
+            $planId = intval($request->get('plan_id'));
+            $user = Auth::user();
+
+            $plan = Plan::with('plan_receta')
+                ->where('id', $planId)
+                ->whereIn('tipo_id', [4, $user->role_id])
+                ->first();
+
+            if ($plan && $plan->plan_receta && intval($plan->plan_receta->id) === $id) {
+                $calendar = $plan->plan_receta;
+            }
+        }
+
+        if (!$calendar) {
+            abort(404);
+        }
 
         // Get user's nutritional preferences
         $nutritionalInfo = \DB::table('nutritional_preferences')

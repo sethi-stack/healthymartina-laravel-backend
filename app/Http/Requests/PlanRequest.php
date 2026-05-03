@@ -25,7 +25,12 @@ class PlanRequest extends FormRequest
     public function rules()
     {
         return [
-            // Add validation rules here
+            'nombre' => 'required|string|max:255',
+            'tipo_id' => 'required|integer',
+            'duracion' => 'nullable|integer|min:1',
+            'introduccion' => 'nullable|string',
+            'descripcion' => 'nullable|string',
+            'plan_receta_payload' => 'nullable',
         ];
     }
 

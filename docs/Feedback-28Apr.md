@@ -114,7 +114,8 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - From 3-dot menu, cannot mark recipe as leftovers.
 
 ### P2 - Enhancement / Performance / Partial readiness
-1. **Sub-recipes not enabled yet** (feature incomplete / readiness gap).
+1. **Sub-recipes not enabled yet** - `IN PROGRESS` (2026-05-03)
+   - UX enablement pass started in recipe detail (explicit clickable sub-recipe links).
 2. **Calendar add recipe feels slower than previous version** (performance regression suspicion).
 3. **Side/leftover actions feel slow before eventual load** (latency optimization).
 4. **Portions button not responding** (servings/portions toggle behavior needs review).
@@ -124,7 +125,8 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Export format not yet matching target format.
 
 ### P3 - Future
-1. **Plans section not ready yet** (explicitly deferred).
+1. **Plans section not ready yet** - `IN PROGRESS` (2026-05-03)
+   - React route + initial page scaffolding enabled (`/planes`) with list/copy/pdf actions.
 
 ## Execution Plan (One-at-a-time with testing)
 
@@ -242,10 +244,19 @@ Start with:
   - Implemented nutrition insights click interaction in calendar nutrition row.
   - Added day nutrition details modal and wired per-day click to open it.
   - Modal reflects current view mode (`statistics` amounts / `macros` percentages).
+- 2026-05-03: Plans + sub-recipes resumed.
+  - Added React Plans route `/planes`, new `Planes` page, and API client integration for:
+    - `GET /plans`
+    - `GET /plans/{id}`
+    - `POST /plans/{id}/copy`
+    - `GET /plans/{id}/pdf`
+  - Sub-recipe UX pass started in Recipe Detail ingredients:
+    - Render sub-recipe ingredients as explicit clickable links (`sub-url`) instead of relying only on injected HTML.
 
 ## Active Next Item
-- `P2.6` **Calendar export format/content incomplete** - `IN PROGRESS` (2026-04-30)
-  - Verify and complete export parity: cover + recipes + final target format.
+- `P3.1` **Plans section readiness** - `IN PROGRESS` (2026-05-03)
+  - Validate `/planes` behavior end-to-end against legacy expectations.
+  - Follow with `P2.1` sub-recipe parity validation.
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.

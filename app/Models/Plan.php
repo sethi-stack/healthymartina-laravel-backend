@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Cviebrock\EloquentSluggable\Sluggable;
+use Illuminate\Support\Str;
 
 
 
@@ -81,6 +82,9 @@ class Plan extends Model
     |--------------------------------------------------------------------------
     */
     public function getIconoAttribute(){
+        if (empty($this->attributes['icono'])) {
+            return null;
+        }
         return \Storage::url($this->attributes['icono']);
     }
 
@@ -100,7 +104,7 @@ class Plan extends Model
         }
 
         // if a base64 was sent, store it in the db
-        if (starts_with($value, 'data:image'))
+        if (is_string($value) && Str::startsWith($value, 'data:image'))
         {
             // 0. Make the image
             $image = \Image::make($value)->encode('jpg', 90);
@@ -113,6 +117,12 @@ class Plan extends Model
         // that way, what gets saved in the database is the user-accesible URL
             $public_destination_path = \Str::replaceFirst('public/', '', $destination_path);
             $this->attributes[$attribute_name] = $public_destination_path.'/'.$filename;
+            return;
+        }
+
+        // Keep existing or direct path values without forcing base64 handling.
+        if (is_string($value) && $value !== '') {
+            $this->attributes[$attribute_name] = $value;
         }
     }
     public function getGuiaAttribute(){
@@ -129,6 +139,6 @@ class Plan extends Model
         $destination_path = "planes/iconos"; // path relative to the disk above
 
         $this->uploadFileToDisk($value, $attribute_name, $disk, $destination_path);
-        return $this->attributes['guia'];
+        return $this->attributes['guia'] ?? null;
     }
 }

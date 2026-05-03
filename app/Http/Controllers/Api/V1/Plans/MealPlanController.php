@@ -18,15 +18,12 @@ class MealPlanController extends Controller
     {
         $user = Auth::user();
 
-        // Free users only see plan ID 20
-        if ($user->hasRole('free')) {
-            $plans = Plan::where('id', 20)->get();
-        } else {
-            // Other users see plans matching their role
-            $plans = Plan::whereNull('deleted_at')
-                ->whereIn('tipo_id', [4, $user->role_id])
-                ->get();
-        }
+        // Role-based visibility:
+        // - shared plans (tipo_id = 4)
+        // - plans targeted to user's role
+        $plans = Plan::whereNull('deleted_at')
+            ->whereIn('tipo_id', [4, $user->role_id])
+            ->get();
 
         return response()->json([
             'plans' => $plans,
@@ -40,15 +37,33 @@ class MealPlanController extends Controller
     {
         $user = Auth::user();
 
-        $plan = Plan::where('id', $id)
+        $plan = Plan::with([
+                'recetas' => function ($query) {
+                    $query->where('active', 1)
+                        ->withCount('recetaInstruccionReceta')
+                        ->orderBy('titulo');
+                },
+            ])
+            ->where('id', $id)
             ->whereIn('tipo_id', [4, $user->role_id])
             ->firstOrFail();
 
         $calendar = $plan->plan_receta;
+        $recipes = $plan->recetas->map(function ($recipe) {
+            return [
+                'id' => $recipe->id,
+                'slug' => $recipe->slug,
+                'titulo' => $recipe->titulo,
+                'tiempo' => $recipe->tiempo,
+                'imagen_principal' => $recipe->imagen_principal,
+                'ingredientes_count' => $recipe->receta_instruccion_receta_count,
+            ];
+        })->values();
 
         return response()->json([
             'plan' => $plan,
             'calendar' => $calendar,
+            'recipes' => $recipes,
         ]);
     }
 
@@ -217,5 +232,3 @@ class MealPlanController extends Controller
         return [$mServings, $sServings];
     }
 }
-
-
