@@ -1,8 +1,8 @@
 <?php
 namespace App\Permissions;
 
-use App\Permission;
-use App\Role;
+use App\Models\Permission;
+use App\Models\Role;
 
 trait HasPermissionsTrait {
 
@@ -11,16 +11,19 @@ trait HasPermissionsTrait {
   }
 
   public function hasRole($role ) {
-      if ($this->role->slug == $role) {
+      if ($this->role && $this->role->slug == $role) {
         return true;
       }
     return false;
   }
   public function permissions() {
-    return $this->role->permissions;
+    return $this->role ? $this->role->permissions : collect();
   }
 
   public function hasPermission($permission) {
+        if (!$this->role) {
+            return false;
+        }
         foreach ($this->role->permissions as $key => $value) {
             if ($value->slug == $permission) {
             return true;
