@@ -28,31 +28,97 @@ Use this section as the quickest reference to client-reported issues.
 23. Grocery list core actions unavailable (add/validate/export/email).
 24. Plans section not ready yet (later scope).
 
+## Latest QA Update - 2026-05-04
+Source: client retest after recent deploy.
+
+## Client Retest Snapshot (After First Test - Verbatim)
+HEALTHY MARTINA
+TESTING software upgrade
+
+- When I open a recipe, sub-recipes are not enabled yet.:white_check_mark:
+- Ingredients and tips are not showing in the recipes.:white_check_mark:
+- It is not possible to add recipes to the calendar from the main recipe library.:white_check_mark:
+  - :bangbang:• *BUT* it doesn’t let me select de calendar that I want to add the recipe
+  - :bangbang:recalentado it’s not showing in the picture (transparent image)
+- From the recipe view, the “add to calendar” button is not working.:white_check_mark:
+  - :bangbang:• *BUT* it doesn’t let me select de calendar that I want to add the recipe
+  - :bangbang:recalentado it’s not showing in the picture (transparent image)
+- From the recipe view, the “export recipe” button is also not working. :x:not working yet
+- The “add comment” button at the bottom is not working.:x:not working yet
+- Filters work correctly when combining tags with number of ingredients and time.:white_check_mark:
+- The issue appears when combining tags with “include ingredients” or “exclude ingredients”: results drop to zero instead of filtering correctly.:white_check_mark:
+- When a filter is applied, if you open a recipe and then go back to the recipe list, the filter resets and has to be set up again.:white_check_mark:
+- I wasn’t able to fully test how the nutrition filters work when combined, because as soon as I open a recipe and go back, the filter resets. This makes it impossible to check multiple recipes in a row to see if the filter is working properly.:white_check_mark:
+- The bookmark button is not working. When I click on it, nothing happens.:white_check_mark:
+- When adding a recipe to the calendar, it seems to be slower than the original version. Since this update is intended to improve speed, I just wanted to flag this in case it’s something that can be optimized or reviewed.:white_check_mark:
+- When I modify the number of servings for a recipe in the calendar, it affects other days where that same recipe was previously selected in the same meal slot :x:this is still the same, it needs to be independent in order to work with l ft overs (for example, breakfast). When editing one day (like Monday), the system shows all the days where that recipe was applied (e.g., Wednesday, Friday, Saturday). However, if I only confirm the change for Monday and don’t reselect or validate the recipe again for the other days, those entries get deleted. This means changes are not applied independently per day, but instead behave as a grouped action across multiple days.
+- The same issue happens when using the leftovers button. If I don’t reselect or validate the recipe again for all the days where it was originally applied, those entries disappear from the calendar.:x:same here
+- The portions button is not working. There are two options (“servings” and “portions”), and the portions button does not respond when clicked. :white_check_mark:working now but not showing the number of portions on the calendar (in the picture)
+- When adding a side or making the recipe as a leftover, the system is very slow. At first it seems like it’s not working, but it eventually loads — just with a noticeable delay. This action can be applied both individually and in bulk.:white_check_mark:done :x:*BUT* not showing the picture in shadow (lighter)
+- When I click the “view recipe details” button, it leads to a 404 error (page not found).:white_check_mark:
+- From the three-dot menu on a recipe in the calendar, it’s not possible to mark it as leftovers, and selecting “view details” leads to a 404 error (page not found). Also, if I choose delete and that same recipe exists on other days in the same meal slot (e.g., dinner), it deletes all instances instead of just that one.:white_check_mark:
+- I can drag the recipe, but when I try to drop it somewhere else, it goes back to its original place. :white_check_mark: but it looks like it’s dragging the recipe below to (at the end it just drops the one that it supposed to drop
+- If I manually add a recipe to a slot (for example, adding a breakfast on Monday without using the full-week edit/block view), and that same slot already had recipes on other days (like Saturday), those existing entries get deleted if I don’t revalidate or confirm them in the full-week view.:white_check_mark:
+- When I click on the nutrition insights of the calendar, nothing happens — the feature doesn’t respond yet.:white_check_mark: it shows the window :x: BUT not the details
+- The calendar is not exporting the cover or the recipes, and the current export format does not match the one we plan to use. :x:It doesn’t have images and the format it’s not correctly file:///Users/cristinaarvizu/Downloads/NUEVO%20(3).pdf
+  - :bangbang:it didn’t work with 9 recipe just with 3
+  - *This feature needs to be completely frictionless since it’s the one they’ll be using the most.*
+- It is not possible to add ingredients, validate existing items in the list, or export/send the grocery list by email. I:white_check_mark: can add an ingredient but :x:not the measure form (cup, pices etc) :x:doesn’t export or email list
+- The plans section is not ready yet, but this can likely be addressed later.:white_check_mark:
+
+### Confirmed working
+- Sub-recipes enabled in recipe view.
+- Ingredients/tips rendering fixed.
+- Add-to-calendar from main library works.
+- Add-to-calendar from recipe detail works.
+- Filter combos and filter persistence are resolved.
+- Bookmark flow works.
+- Drag/drop now persists (visual drag-ghost issue still open).
+- View recipe details 404 fixed.
+- 3-dot calendar menu actions (leftover/view/delete scope) fixed.
+- Manual add no longer wipes other-day slot entries.
+- Plans section now accessible and mostly wired.
+
+### Reopened / still failing
+- `REOPEN P2.6` Calendar export still missing images/cover, format mismatch, and fails with larger recipe counts.
+- `REOPEN P0.5` Grocery list still missing measure/unit input parity and export/email remains broken.
+
+### New bugs found in this pass
+- `NEW P1.7` Add-to-calendar flow does not allow choosing target calendar from library/detail entry points.
+- `NEW P1.8` Leftover/reheated visual state not rendered (transparent/lighter overlay image missing) in recipe/calendar cards.
+- `NEW P2.7` Portions now toggles, but portion value is not displayed on calendar card UI.
+- `NEW P2.8` Drag preview appears to include the recipe below while dragging (visual ghost artifact).
+- `NEW P3.2` Calendar picker modal title alignment is slightly shifted right (UI polish, low priority).
+
 ## Client List Mapping (Solved vs Open)
 - `1` Sub-recipes not enabled → `P2.1` → `OPEN` (known incomplete feature).
 - `2` Ingredients/tips missing → `P1.1` → `SOLVED` (`DONE`, 2026-04-29).
 - `3` Main library add-to-calendar unavailable → `P1.2` → `SOLVED` (`DONE`, 2026-04-29).
 - `4` Recipe view add-to-calendar broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
-- `5` Recipe view export broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
-- `6` Add comment broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
+- `5` Recipe view export broken → `P0.1a` → `SOLVED` (`DONE`, 2026-05-04).
+- `6` Add comment broken → `P0.1b` → `NEEDS RETEST` (comment menu parity fixes shipped, 2026-05-04).
 - `7` Tags + ingredient-count/time works → Behavior note, no bug ticket needed.
 - `8` Tags + include/exclude returns zero unexpectedly → `P1.4` → `SOLVED` (`DONE`, 2026-04-30).
 - `9` Filter resets on recipe open/back → `P1.5` → `SOLVED` (`DONE`, 2026-04-30).
 - `10` Nutrition-filter validation blocked by reset → `P1.6`/`P1.5` blockers `SOLVED`; full nutrition-mix QA still recommended.
 - `11` Bookmark button not working → `P1.3` → `SOLVED` (`DONE`, 2026-04-29; UX follow-up 2026-04-30).
 - `12` Calendar add feels slower than previous → `P2.2` → `OPEN`.
-- `13` Servings grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-04-29; needs QA confidence).
-- `14` Leftovers grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-04-29; needs QA confidence).
+- `13` Servings grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-05-04).
+- `14` Leftovers grouped destructive behavior → `P0.3-L` → `SOLVED` (`DONE`, 2026-05-04).
 - `15` Portions button not responding → `P2.4` → `SOLVED` (`DONE`, 2026-04-30).
 - `16` Side/leftovers latency → `P2.3` → `OPEN`.
 - `17` View recipe details 404 → `P0.2` → `SOLVED` (`DONE`, 2026-04-29).
 - `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers/view details/delete scopes `SOLVED` (`P1.6`/`P0.2`/`P0.3`).
 - `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
 - `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
-- `21` Nutrition insights unresponsive → `P2.5` → `SOLVED` (`DONE`, 2026-04-30).
-- `22` Calendar export incomplete/mismatch → `P2.6` → `OPEN`.
-- `23` Grocery list core actions unavailable → `P0.5` → `NEEDS RETEST`.
+- `21` Nutrition insights unresponsive → `SOLVED` (`P2.5 DONE`, 2026-05-04).
+- `22` Calendar export incomplete/mismatch → `P2.6` → `REOPENED / HIGH RISK`.
+- `23` Grocery list core actions unavailable → `P0.5` → `REOPENED` (partial only).
 - `24` Plans section not ready → `P3.1` → `DEFERRED`.
+- Add-to-calendar target calendar selector missing → `P1.7` → `NEW`.
+- Leftover/reheated visual overlay missing → `P1.8` → `NEW`.
+- Portions value not shown on calendar cards → `P2.7` → `NEW`.
+- Drag ghost preview artifact while dragging → `P2.8` → `NEW`.
 
 ## Goal
 Track initial QA feedback, prioritize by criticality, and execute fixes one at a time with testing checkpoints between each implementation.
@@ -66,16 +132,16 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 ## Prioritized Backlog
 
 ### P0 - Critical (fix first)
-1. **Recipe view buttons not working** - `DONE` (2026-04-29)
-   - Add to calendar button does not work.
-   - Export recipe button does not work.
-   - Add comment button does not work.
+1. **Recipe view buttons not working** - `PARTIAL / REOPENED` (2026-05-04)
+   - Add to calendar button now works.
+   - Export recipe fixed (`P0.1a`, 2026-05-04).
+   - Add comment flow/menu fixes shipped (`P0.1b`), pending retest.
 
 2. **Recipe details navigation broken** - `DONE` (2026-04-29)
    - “View recipe details” leads to 404.
    - Same 404 from 3-dot calendar menu.
 
-3. **Calendar destructive grouped behavior / data integrity** - `DONE` (2026-04-29)
+3. **Calendar destructive grouped behavior / data integrity** - `DONE` (2026-05-04)
    - Editing servings on one day affects other days in same meal slot.
    - If not revalidated in full-week flow, entries on other days get deleted.
    - Same issue with leftovers.
@@ -86,10 +152,11 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Item returns to original position after drop.
    - Open bug: drag preview shows extra height at bottom while dragging.
 
-5. **Grocery list core actions unavailable** - `NEEDS RETEST` (2026-04-29)
+5. **Grocery list core actions unavailable** - `REOPENED` (2026-05-04)
    - Cannot add ingredients.
    - Cannot validate existing list items.
    - Cannot export/send grocery list by email.
+   - Add ingredient works, but measurement/unit parity still missing.
 
 ### P1 - High
 1. **Recipe content missing in detail** - `DONE` (2026-04-29)
@@ -113,16 +180,27 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 6. **Calendar recipe menu limitation** - `DONE` (2026-04-30)
    - From 3-dot menu, cannot mark recipe as leftovers.
 
+7. **Add-to-calendar target calendar selection missing** - `NEW` (2026-05-04)
+   - From recipe library/detail add flow, user cannot choose target calendar.
+
+8. **Leftover/reheated visual overlay missing** - `NEW` (2026-05-04)
+   - Lighter/transparent leftover visual state not rendered in card image.
+
 ### P2 - Enhancement / Performance / Partial readiness
 1. **Sub-recipes not enabled yet** - `IN PROGRESS` (2026-05-03)
    - UX enablement pass started in recipe detail (explicit clickable sub-recipe links).
 2. **Calendar add recipe feels slower than previous version** (performance regression suspicion).
 3. **Side/leftover actions feel slow before eventual load** (latency optimization).
 4. **Portions button not responding** (servings/portions toggle behavior needs review).
-5. **Nutrition insights click does nothing** (feature not responsive yet).
-6. **Calendar export format/content incomplete**
+5. **Nutrition insights interaction/details incomplete** - `DONE` (2026-05-04)
+   - Modal/details payload rendering fixed.
+6. **Calendar export format/content incomplete** - `REOPENED / HIGH RISK` (2026-05-04)
    - Missing cover and recipes in export.
    - Export format not yet matching target format.
+   - Fails on larger recipe counts (reported: 9 fails, 3 works).
+7. **Portions value not shown on calendar card** - `NEW` (2026-05-04)
+8. **Drag preview ghost artifact** - `NEW` (2026-05-04)
+   - Dragging one recipe visually appears to include another recipe below.
 
 ### P3 - Future
 1. **Plans section not ready yet** - `IN PROGRESS` (2026-05-03)
@@ -252,11 +330,32 @@ Start with:
     - `GET /plans/{id}/pdf`
   - Sub-recipe UX pass started in Recipe Detail ingredients:
     - Render sub-recipe ingredients as explicit clickable links (`sub-url`) instead of relying only on injected HTML.
+- 2026-05-04: Client retest ingested and tracker refreshed.
+  - Reopened critical regressions: recipe export, add comment, calendar servings independence, leftovers independence.
+  - Reopened nutrition details, export parity/reliability, and grocery list completion gaps.
+  - Added new bugs: add-to-calendar target selection, leftover overlay visual, portions display, drag ghost preview artifact.
+- 2026-05-04: `P0.1a` completed.
+  - Recipe export switched to legacy Advanced/Bold template path by default.
+  - Dompdf remote assets enabled.
+  - Recipe image embedded as base64 fallback for stable PDF rendering.
+- 2026-05-04: `P0.1b` implementation update.
+  - Comment kebab menu migrated to reusable `hm-menu` structure for correct icon/label spacing.
+  - Delete option now hidden for non-owned comments (`is_owned_by_current_user === true` only).
+  - Pending QA retest on add-comment end-to-end behavior.
+- 2026-05-04: `P0.3` / `P0.3-L` completed.
+  - Update meal modal now defaults to day-scoped edit (no implicit multi-day preselection).
+  - Backend update no longer prunes unchecked days unless explicitly requested via `prune_unselected=true`.
+  - QA retest passed: editing one day no longer deletes/changes other same-slot days.
+- 2026-05-04: `P2.5` completed.
+  - Nutrition row/modal now renders returned nutrient detail items even when values are zero.
+  - Fixed empty-details modal state in affected flow.
 
 ## Active Next Item
-- `P3.1` **Plans section readiness** - `IN PROGRESS` (2026-05-03)
-  - Validate `/planes` behavior end-to-end against legacy expectations.
-  - Follow with `P2.1` sub-recipe parity validation.
+- `P1.7` **Add-to-calendar target calendar selector** - `NEEDS RETEST` (2026-05-04)
+- Then `P2.6` calendar export parity/reliability.
+
+### Deferred UI polish
+- `P3.2` Calendar picker modal title alignment (left offset mismatch) - `DEFERRED` (2026-05-04)
 
 ## Notes
 - This document is intentionally execution-oriented so we can track status quickly.

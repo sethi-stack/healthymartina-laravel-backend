@@ -358,12 +358,14 @@ class CalendarController extends Controller
             'leftover' => 'nullable|boolean',
             'old_mealnum' => 'nullable|string',
             'old_daynum' => 'nullable|string',
+            'prune_unselected' => 'nullable|boolean',
         ]);
 
         $mealnum = $validated['mealnum'];
         $selectedDays = $validated['daynum'];
         $allDays = ['day_1', 'day_2', 'day_3', 'day_4', 'day_5', 'day_6', 'day_7'];
         $removeDays = array_diff($allDays, $selectedDays);
+        $shouldPruneUnselected = boolval($validated['prune_unselected'] ?? false);
         $recipeId = intval($validated['recetaid']);
 
         if ($validated['mealtype'] === 'main') {
@@ -381,16 +383,18 @@ class CalendarController extends Controller
                 $mainLeftovers[$dayKey][$mealnum] = $validated['leftover'] ?? false;
             }
 
-            // Unchecked days should remove this main recipe from that meal slot
-            foreach ($removeDays as $dayKey) {
-                if (isset($mainSchedule[$dayKey][$mealnum]) && intval($mainSchedule[$dayKey][$mealnum]) === $recipeId) {
-                    $mainSchedule[$dayKey][$mealnum] = null;
-                    $mainServings[$dayKey][$mealnum] = 1;
-                    $mainLeftovers[$dayKey][$mealnum] = null;
-                    // Side is tied to main for that slot
-                    $sidesSchedule[$dayKey][$mealnum] = null;
-                    $sidesServings[$dayKey][$mealnum] = 1;
-                    $sidesLeftovers[$dayKey][$mealnum] = null;
+            if ($shouldPruneUnselected) {
+                // Optional bulk mode only: remove from unchecked days when explicitly requested.
+                foreach ($removeDays as $dayKey) {
+                    if (isset($mainSchedule[$dayKey][$mealnum]) && intval($mainSchedule[$dayKey][$mealnum]) === $recipeId) {
+                        $mainSchedule[$dayKey][$mealnum] = null;
+                        $mainServings[$dayKey][$mealnum] = 1;
+                        $mainLeftovers[$dayKey][$mealnum] = null;
+                        // Side is tied to main for that slot
+                        $sidesSchedule[$dayKey][$mealnum] = null;
+                        $sidesServings[$dayKey][$mealnum] = 1;
+                        $sidesLeftovers[$dayKey][$mealnum] = null;
+                    }
                 }
             }
 
@@ -412,12 +416,14 @@ class CalendarController extends Controller
                 $sidesLeftovers[$dayKey][$mealnum] = $validated['leftover'] ?? false;
             }
 
-            // Unchecked days should remove this side recipe from that meal slot
-            foreach ($removeDays as $dayKey) {
-                if (isset($sidesSchedule[$dayKey][$mealnum]) && intval($sidesSchedule[$dayKey][$mealnum]) === $recipeId) {
-                    $sidesSchedule[$dayKey][$mealnum] = null;
-                    $sidesServings[$dayKey][$mealnum] = 1;
-                    $sidesLeftovers[$dayKey][$mealnum] = null;
+            if ($shouldPruneUnselected) {
+                // Optional bulk mode only: remove from unchecked days when explicitly requested.
+                foreach ($removeDays as $dayKey) {
+                    if (isset($sidesSchedule[$dayKey][$mealnum]) && intval($sidesSchedule[$dayKey][$mealnum]) === $recipeId) {
+                        $sidesSchedule[$dayKey][$mealnum] = null;
+                        $sidesServings[$dayKey][$mealnum] = 1;
+                        $sidesLeftovers[$dayKey][$mealnum] = null;
+                    }
                 }
             }
 

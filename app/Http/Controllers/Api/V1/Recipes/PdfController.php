@@ -9,9 +9,44 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class PdfController extends Controller
 {
+    private function buildRecipePdf(Receta $recipe, $nutritionalsInfo, $user)
+    {
+        $recipeImageSrc = $recipe->imagen_principal;
+        $rawImagePath = $recipe->getRawOriginal('imagen_principal');
+        if (!empty($rawImagePath)) {
+            try {
+                $disk = config('filesystems.default', 'local');
+                $binary = Storage::disk($disk)->get($rawImagePath);
+                $extension = strtolower(pathinfo($rawImagePath, PATHINFO_EXTENSION));
+                $mime = match ($extension) {
+                    'png' => 'image/png',
+                    'gif' => 'image/gif',
+                    'webp' => 'image/webp',
+                    default => 'image/jpeg',
+                };
+                $recipeImageSrc = 'data:' . $mime . ';base64,' . base64_encode($binary);
+            } catch (\Throwable $e) {
+                // Fallback to URL accessor when direct read is unavailable.
+                $recipeImageSrc = $recipe->imagen_principal;
+            }
+        }
+
+        // Legacy parity: use Advanced/Bold recipe template by default.
+        $viewData = [
+            'recipe' => $recipe,
+            'nutritionals_info' => $nutritionalsInfo,
+            'export_param' => [3, 4], // include tips + nutrition blocks
+            'recipe_ingredients_data' => [],
+            'recipe_image_src' => $recipeImageSrc,
+        ];
+
+        return PDF::loadView('pdf.bold.calendar-bold-recipe', $viewData)->setPaper('a4', 'portrait');
+    }
+
     /**
      * Generate and download recipe PDF.
      */
@@ -28,25 +63,7 @@ class PdfController extends Controller
             ? json_decode($nutritionals->nutritional_info)
             : config()->get('constants.nutritients');
 
-        // Professional users get themed PDFs
-        if ($user->role_id == 3) {
-            $theme = $user->theme ?? 3;
-            
-            $viewMap = [
-                1 => 'pdf.classic.classic-recipe',
-                2 => 'pdf.modern.modern-recipe',
-                3 => 'pdf.bold.bold-recipe',
-            ];
-
-            $view = $viewMap[$theme] ?? 'pdf.bold.bold-recipe';
-            $pdf = PDF::loadView($view, [
-                'recipe' => $recipe,
-                'nutritionals_info' => $nutritionals_info
-            ])->setPaper('a4', 'portrait');
-        } else {
-            // Free/basic users get standard PDF
-            $pdf = PDF::loadView('pdf.recipe', ['recipe' => $recipe]);
-        }
+        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user);
 
         return $pdf->download($recipe->titulo . '.pdf');
     }
@@ -81,24 +98,7 @@ class PdfController extends Controller
             ? json_decode($nutritionals->nutritional_info)
             : config()->get('constants.nutritients');
 
-        // Generate PDF based on user theme
-        if ($user->role_id == 3) {
-            $theme = $user->theme ?? 3;
-            
-            $viewMap = [
-                1 => 'pdf.classic.classic-recipe',
-                2 => 'pdf.modern.modern-recipe',
-                3 => 'pdf.bold.bold-recipe',
-            ];
-
-            $view = $viewMap[$theme] ?? 'pdf.bold.bold-recipe';
-            $pdf = PDF::loadView($view, [
-                'recipe' => $recipe,
-                'nutritionals_info' => $nutritionals_info
-            ])->setPaper('a4', 'portrait');
-        } else {
-            $pdf = PDF::loadView('pdf.recipe', ['recipe' => $recipe]);
-        }
+        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user);
 
         // Prepare email data
         $data = [
@@ -146,4 +146,3 @@ class PdfController extends Controller
         }
     }
 }
-

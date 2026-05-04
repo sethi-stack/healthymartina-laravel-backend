@@ -9,6 +9,10 @@
     }
 
     $nutritionals_info = json_decode(json_encode($nutritionals_info ?? []), false);
+    $recipeImage = $recipe_image_src ?? ($recipe->imagen_principal ?? '');
+    if (!empty($recipeImage) && !\Illuminate\Support\Str::startsWith($recipeImage, ['http://', 'https://', 'data:'])) {
+        $recipeImage = url($recipeImage);
+    }
     $filter_info = [];
     foreach ($nutritionals_info as $key => $value) {
         if (($value->mostrar ?? 0) == 1) {
@@ -137,7 +141,7 @@
               </p>
             </div>
             <div class="img-height" style="max-height: 350px; max-width: 90%; margin:-150px auto 0; overflow: hidden">
-              <img src="{{ $recipe->imagen_principal }}" alt="Image" />
+              <img src="{{ $recipeImage }}" alt="Image" />
             </div>
           </div>
         </caption>
