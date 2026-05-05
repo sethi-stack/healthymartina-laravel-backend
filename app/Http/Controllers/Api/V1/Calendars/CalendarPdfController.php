@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\V1\Calendars;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\CalendarController as LegacyCalendarController;
 use App\Models\Calendar;
+use App\Models\CalendarExportJob;
 use App\Models\Categoria;
 use App\Models\ListaIngredientes;
 use App\Models\Receta;
+use App\Services\Calendar\ExternalPdfExportService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use iio\libmergepdf\Merger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -173,6 +176,152 @@ class CalendarPdfController extends Controller
             'success' => true,
             'message' => 'Se envio por mail exitosamente',
         ]);
+    }
+
+    public function startJob(Request $request, ExternalPdfExportService $externalPdfExportService)
+    {
+        $validated = $request->validate([
+            'calendar'       => 'required|integer',
+            'export_param'   => 'required|array|min:1',
+            'export_param.*' => 'integer|in:1,2,4',
+            'template'       => 'nullable|in:classic,modern,bold,basic,advanced',
+            'hero_recipe_id' => 'nullable|integer',
+            'selected_recipes' => 'nullable|array',
+            'selected_recipes.*' => 'integer',
+        ]);
+
+        $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
+
+        $payload = $this->buildExportPayload(
+            $calendar,
+            $validated['export_param'],
+            $this->normalizeTemplate($validated['template'] ?? 'classic'),
+            $validated['hero_recipe_id'] ?? null,
+            $validated['selected_recipes'] ?? []
+        );
+
+        $job = CalendarExportJob::create([
+            'job_id' => (string) Str::uuid(),
+            'user_id' => Auth::id(),
+            'calendar_id' => $calendar->id,
+            'status' => 'queued',
+            'progress' => 0,
+            'request_payload' => $validated,
+            'status_payload' => null,
+        ]);
+
+        try {
+            $externalPayload = [
+                'job_id' => $job->job_id,
+                'user_id' => Auth::id(),
+                'calendar_id' => $calendar->id,
+                'payload' => $payload,
+            ];
+            $serviceResponse = $externalPdfExportService->enqueue($externalPayload);
+
+            $job->external_job_id = (string) ($serviceResponse['job_id'] ?? $job->job_id);
+            $job->status = (string) ($serviceResponse['status'] ?? 'queued');
+            $job->save();
+        } catch (\Throwable $e) {
+            $job->status = 'failed';
+            $job->error_message = $e->getMessage();
+            $job->save();
+
+            Log::error('calendar_export.job.start_failed', [
+                'job_id' => $job->job_id,
+                'user_id' => Auth::id(),
+                'calendar_id' => $calendar->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'job_id' => $job->job_id,
+            'status' => $job->status,
+        ]);
+    }
+
+    public function jobStatus(string $jobId, ExternalPdfExportService $externalPdfExportService)
+    {
+        $job = CalendarExportJob::query()
+            ->where('job_id', $jobId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if (!empty($job->external_job_id) && in_array($job->status, ['queued', 'processing'], true)) {
+            try {
+                $status = $externalPdfExportService->status($job->external_job_id);
+                $this->hydrateJobFromExternalStatus($job, $status, $externalPdfExportService);
+            } catch (\Throwable $e) {
+                Log::warning('calendar_export.job.status_sync_failed', [
+                    'job_id' => $job->job_id,
+                    'external_job_id' => $job->external_job_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'job_id' => $job->job_id,
+            'status' => $job->status,
+            'progress' => $job->progress,
+            'error' => $job->error_message,
+            'file_url' => $job->file_url,
+        ]);
+    }
+
+    public function jobDownload(string $jobId, ExternalPdfExportService $externalPdfExportService)
+    {
+        $job = CalendarExportJob::query()
+            ->where('job_id', $jobId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if ($job->status !== 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'El PDF no está listo todavía.',
+            ], 409);
+        }
+
+        if (!$job->external_job_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró referencia del archivo exportado.',
+            ], 404);
+        }
+
+        return redirect()->away($externalPdfExportService->downloadUrl($job->external_job_id));
+    }
+
+    private function hydrateJobFromExternalStatus(
+        CalendarExportJob $job,
+        array $status,
+        ExternalPdfExportService $externalPdfExportService
+    ): void {
+        $job->status = (string) ($status['status'] ?? $job->status);
+        $job->progress = (int) ($status['progress'] ?? $job->progress);
+        $job->status_payload = $status;
+        $job->error_message = $status['error_message'] ?? $job->error_message;
+        $job->file_path = $status['file_path'] ?? $job->file_path;
+        $job->file_size = isset($status['file_size']) ? (int) $status['file_size'] : $job->file_size;
+
+        if ($job->status === 'processing' && !$job->started_at) {
+            $job->started_at = now();
+        }
+
+        if ($job->status === 'completed') {
+            $job->completed_at = now();
+            $job->file_url = $externalPdfExportService->downloadUrl((string) $job->external_job_id);
+        }
+
+        if ($job->status === 'failed' && !$job->completed_at) {
+            $job->completed_at = now();
+        }
+
+        $job->save();
     }
 
     /**
