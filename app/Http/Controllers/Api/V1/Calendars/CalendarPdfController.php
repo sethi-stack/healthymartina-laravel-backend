@@ -13,41 +13,91 @@ use iio\libmergepdf\Merger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class CalendarPdfController extends Controller
 {
+    private function prepareExportRuntimeLimits(): void
+    {
+        // Export is CPU/memory heavy (Dompdf + merge). Raise limits only for this request path.
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+    }
+
     public function download(Request $request)
     {
-        $validated = $request->validate([
-            'calendar'       => 'required|integer',
-            'export_param'   => 'required|array|min:1',
-            'export_param.*' => 'integer|in:1,2,4',
-            'template'       => 'nullable|in:classic,modern,bold,basic,advanced',
-            'hero_recipe_id' => 'nullable|integer',
-            'selected_recipes' => 'nullable|array',
-            'selected_recipes.*' => 'integer',
-        ]);
+        $this->prepareExportRuntimeLimits();
+        $startedAt = microtime(true);
+        try {
+            $validated = $request->validate([
+                'calendar'       => 'required|integer',
+                'export_param'   => 'required|array|min:1',
+                'export_param.*' => 'integer|in:1,2,4',
+                'template'       => 'nullable|in:classic,modern,bold,basic,advanced',
+                'hero_recipe_id' => 'nullable|integer',
+                'selected_recipes' => 'nullable|array',
+                'selected_recipes.*' => 'integer',
+            ]);
 
-        $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
+            $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
 
-        $payload = $this->buildExportPayload(
-            $calendar,
-            $validated['export_param'],
-            $this->normalizeTemplate($validated['template'] ?? 'classic'),
-            $validated['hero_recipe_id'] ?? null,
-            $validated['selected_recipes'] ?? []
-        );
+            $payload = $this->buildExportPayload(
+                $calendar,
+                $validated['export_param'],
+                $this->normalizeTemplate($validated['template'] ?? 'classic'),
+                $validated['hero_recipe_id'] ?? null,
+                $validated['selected_recipes'] ?? []
+            );
 
-        $pdfBinary = $this->renderExportPdf($payload);
+            $pdfBinary = $this->renderExportPdf($payload);
+            $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+            Log::info('calendar_export.download.success', [
+                'user_id' => Auth::id(),
+                'calendar_id' => $calendar->id,
+                'template' => $payload['template'] ?? null,
+                'export_params' => $validated['export_param'] ?? [],
+                'selected_recipe_count' => count($validated['selected_recipes'] ?? []),
+                'included_recipe_pages' => count($payload['recipePages'] ?? []),
+                'has_hero' => !empty($payload['heroRecipe']),
+                'output_bytes' => strlen($pdfBinary),
+                'duration_ms' => $durationMs,
+            ]);
 
-        return response($pdfBinary, 200)
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'attachment; filename="' . ($calendar->title ?? 'calendario') . '.pdf"');
+            $tmpExportDir = storage_path('app/exports/final');
+            if (!is_dir($tmpExportDir)) {
+                mkdir($tmpExportDir, 0775, true);
+            }
+
+            $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', (string) ($calendar->title ?? 'calendario'));
+            $tmpFilePath = $tmpExportDir . DIRECTORY_SEPARATOR . $safeName . '_' . uniqid('', true) . '.pdf';
+            file_put_contents($tmpFilePath, $pdfBinary);
+            unset($pdfBinary);
+
+            return response()->download(
+                $tmpFilePath,
+                ($calendar->title ?? 'calendario') . '.pdf',
+                ['Content-Type' => 'application/pdf']
+            )->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            Log::error('calendar_export.download.failed', [
+                'user_id' => Auth::id(),
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al exportar calendario: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function email(Request $request)
     {
+        $this->prepareExportRuntimeLimits();
+        $startedAt = microtime(true);
         $validated = $request->validate([
             'calendar'       => 'required|integer',
             'export_param'   => 'required|array|min:1',
@@ -78,6 +128,19 @@ class CalendarPdfController extends Controller
         );
 
         $pdfBinary = $this->renderExportPdf($payload);
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
+        Log::info('calendar_export.email.rendered', [
+            'user_id' => Auth::id(),
+            'calendar_id' => $calendar->id,
+            'recipient' => $recipient,
+            'template' => $payload['template'] ?? null,
+            'export_params' => $validated['export_param'] ?? [],
+            'selected_recipe_count' => count($validated['selected_recipes'] ?? []),
+            'included_recipe_pages' => count($payload['recipePages'] ?? []),
+            'has_hero' => !empty($payload['heroRecipe']),
+            'output_bytes' => strlen($pdfBinary),
+            'duration_ms' => $durationMs,
+        ]);
         $fileName = ($calendar->title ?? 'calendario') . '.pdf';
         $title = '¡Tu plan de alimentación esta listo!';
 
@@ -343,41 +406,60 @@ class CalendarPdfController extends Controller
             return $this->renderLegacyBoldExportPdf($payload);
         }
         $paper = $template === 'modern' ? 'landscape' : 'portrait';
-        $merger = new Merger();
+        return $this->mergeSectionsFromTempFiles(function (Merger $merger, string $tmpDir, array &$files) use ($payload, $template, $paper) {
+            if (!empty($payload['heroRecipe'])) {
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.calendar.hero-cover',
+                    [
+                        'calendar' => $payload['calendar'],
+                        'user' => Auth::user(),
+                        'template' => $template,
+                        'recipe' => $payload['heroRecipe'],
+                        'placeholderImage' => $payload['placeholderImage'],
+                    ],
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'hero'
+                );
+            }
 
-        if (!empty($payload['heroRecipe'])) {
-            $merger->addRaw(
-                PDF::loadView('pdf.calendar.hero-cover', [
-                    'calendar' => $payload['calendar'],
+            foreach ($payload['recipePages'] as $index => $recipePage) {
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.calendar.recipe-page',
+                    [
+                        'calendar' => $payload['calendar'],
+                        'user' => Auth::user(),
+                        'template' => $template,
+                        'recipe' => $recipePage['recipe'],
+                        'portion' => $recipePage['portion'],
+                        'ingredients' => $recipePage['ingredients'],
+                        'placeholderImage' => $payload['placeholderImage'],
+                    ],
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'recipe_' . $index
+                );
+            }
+
+            $this->renderViewToTempFileAndAdd(
+                $merger,
+                "pdf.calendar.{$template}",
+                array_merge($payload, [
                     'user' => Auth::user(),
-                    'template' => $template,
-                    'recipe' => $payload['heroRecipe'],
-                    'placeholderImage' => $payload['placeholderImage'],
-                ])->setPaper('a4', 'portrait')->output()
+                ]),
+                'a4',
+                $paper,
+                $tmpDir,
+                $files,
+                'calendar'
             );
-        }
-
-        foreach ($payload['recipePages'] as $recipePage) {
-            $merger->addRaw(
-                PDF::loadView('pdf.calendar.recipe-page', [
-                    'calendar' => $payload['calendar'],
-                    'user' => Auth::user(),
-                    'template' => $template,
-                    'recipe' => $recipePage['recipe'],
-                    'portion' => $recipePage['portion'],
-                    'ingredients' => $recipePage['ingredients'],
-                    'placeholderImage' => $payload['placeholderImage'],
-                ])->setPaper('a4', 'portrait')->output()
-            );
-        }
-
-        $merger->addRaw(
-            PDF::loadView("pdf.calendar.{$template}", array_merge($payload, [
-                'user' => Auth::user(),
-            ]))->setPaper('a4', $paper)->output()
-        );
-
-        return $merger->merge();
+        });
     }
 
     private function renderLegacyBoldExportPdf(array $payload): string
@@ -385,67 +467,160 @@ class CalendarPdfController extends Controller
         $calendar = $payload['calendar'];
         $exportParams = $payload['exportParams'] ?? [];
         $placeholderImage = $payload['placeholderImage'] ?? public_path('img/recetas/imagen-receta-principal.jpg');
-        $recipesList = Receta::all()->sortBy('free');
+        // Avoid loading all recipes in memory during export.
+        $recipesList = collect($payload['recipes_list'] ?? [])->sortBy('free')->values();
         $boldContext = $this->buildLegacyBoldContext($payload);
+        return $this->mergeSectionsFromTempFiles(function (Merger $merger, string $tmpDir, array &$files) use ($payload, $boldContext, $calendar, $exportParams, $placeholderImage, $recipesList) {
+            if (!empty($payload['heroRecipe'])) {
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.bold.bold-rectia-cover',
+                    array_merge($boldContext, [
+                        'calendar' => $calendar,
+                        'calendario' => $calendar,
+                        'recipe' => $payload['heroRecipe'],
+                        'receta_cover_img_src' => $this->resolveRecipeImage($payload['heroRecipe']->imagen_principal ?? null, $placeholderImage),
+                    ]),
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'hero'
+                );
+            }
+
+            foreach ($payload['recipePages'] as $index => $recipePage) {
+                $recipe = $recipePage['recipe'];
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.bold.calendar-bold-recipe',
+                    array_merge($boldContext, [
+                        'calendar' => $calendar,
+                        'calendario' => $calendar,
+                        'recipe' => $recipe,
+                        'porcion' => $recipePage['portion'],
+                        'recipe_ingredients_data' => $boldContext['recipe_ingredients_data'] ?? [],
+                        'export_param' => $exportParams,
+                    ]),
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'recipe_' . $index
+                );
+            }
+
+            if (in_array(1, $exportParams, true)) {
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.bold.bold-calendario-potrait',
+                    array_merge($boldContext, [
+                        'calendar' => $calendar,
+                        'calendario' => $calendar,
+                        'recipes_list' => $recipesList,
+                        'placeholderImage' => $placeholderImage,
+                        'placeholderImageSrc' => $this->buildPlaceholderSvgDataUri(),
+                    ]),
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'calendar'
+                );
+            }
+
+            if (in_array(4, $exportParams, true)) {
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.bold.calendar-bold-nutri',
+                    array_merge($boldContext, [
+                        'calendar' => $calendar,
+                        'calendario' => $calendar,
+                        'recipes_list' => $recipesList,
+                    ]),
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'nutrition'
+                );
+            }
+
+            if (in_array(2, $exportParams, true)) {
+                $this->renderViewToTempFileAndAdd(
+                    $merger,
+                    'pdf.bold.calendar-bold-lista',
+                    array_merge($boldContext, [
+                        'calendar' => $calendar,
+                        'calendario' => $calendar,
+                    ]),
+                    'a4',
+                    'portrait',
+                    $tmpDir,
+                    $files,
+                    'lista'
+                );
+            }
+        });
+    }
+
+    private function mergeSectionsFromTempFiles(callable $builder): string
+    {
+        $tmpDir = storage_path('app/exports/tmp/' . uniqid('calendar_', true));
+        if (!is_dir($tmpDir)) {
+            mkdir($tmpDir, 0775, true);
+        }
+
+        $files = [];
         $merger = new Merger();
-
-        if (!empty($payload['heroRecipe'])) {
-            $merger->addRaw(
-                PDF::loadView('pdf.bold.bold-rectia-cover', array_merge($boldContext, [
-                    'calendar' => $calendar,
-                    'calendario' => $calendar,
-                    'recipe' => $payload['heroRecipe'],
-                    'receta_cover_img_src' => $this->resolveRecipeImage($payload['heroRecipe']->imagen_principal ?? null, $placeholderImage),
-                ]))->setPaper('a4', 'portrait')->output()
-            );
+        $startedAt = microtime(true);
+        try {
+            $builder($merger, $tmpDir, $files);
+            $merged = $merger->merge();
+            Log::info('calendar_export.merge.success', [
+                'user_id' => Auth::id(),
+                'tmp_dir' => $tmpDir,
+                'chunk_count' => count($files),
+                'output_bytes' => strlen($merged),
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            ]);
+            return $merged;
+        } catch (\Throwable $e) {
+            Log::error('calendar_export.merge.failed', [
+                'user_id' => Auth::id(),
+                'tmp_dir' => $tmpDir,
+                'chunk_count' => count($files),
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        } finally {
+            foreach ($files as $file) {
+                if (is_string($file) && file_exists($file)) {
+                    @unlink($file);
+                }
+            }
+            if (is_dir($tmpDir)) {
+                @rmdir($tmpDir);
+            }
         }
+    }
 
-        foreach ($payload['recipePages'] as $recipePage) {
-            $recipe = $recipePage['recipe'];
-            $merger->addRaw(
-                PDF::loadView('pdf.bold.calendar-bold-recipe', array_merge($boldContext, [
-                    'calendar' => $calendar,
-                    'calendario' => $calendar,
-                    'recipe' => $recipe,
-                    'porcion' => $recipePage['portion'],
-                    'recipe_ingredients_data' => $boldContext['recipe_ingredients_data'] ?? [],
-                    'export_param' => $exportParams,
-                ]))->setPaper('a4', 'portrait')->output()
-            );
-        }
-
-        if (in_array(1, $exportParams, true)) {
-            $merger->addRaw(
-                PDF::loadView('pdf.bold.bold-calendario-potrait', array_merge($boldContext, [
-                    'calendar' => $calendar,
-                    'calendario' => $calendar,
-                    'recipes_list' => $recipesList,
-                    'placeholderImage' => $placeholderImage,
-                    'placeholderImageSrc' => $this->buildPlaceholderSvgDataUri(),
-                ]))->setPaper('a4', 'portrait')->output()
-            );
-        }
-
-        if (in_array(4, $exportParams, true)) {
-            $merger->addRaw(
-                PDF::loadView('pdf.bold.calendar-bold-nutri', array_merge($boldContext, [
-                    'calendar' => $calendar,
-                    'calendario' => $calendar,
-                    'recipes_list' => $recipesList,
-                ]))->setPaper('a4', 'portrait')->output()
-            );
-        }
-
-        if (in_array(2, $exportParams, true)) {
-            $merger->addRaw(
-                PDF::loadView('pdf.bold.calendar-bold-lista', array_merge($boldContext, [
-                    'calendar' => $calendar,
-                    'calendario' => $calendar,
-                ]))->setPaper('a4', 'portrait')->output()
-            );
-        }
-
-        return $merger->merge();
+    private function renderViewToTempFileAndAdd(
+        Merger $merger,
+        string $view,
+        array $data,
+        string $paper,
+        string $orientation,
+        string $tmpDir,
+        array &$files,
+        string $prefix
+    ): void {
+        $pdfBinary = PDF::loadView($view, $data)->setPaper($paper, $orientation)->output();
+        $path = $tmpDir . DIRECTORY_SEPARATOR . $prefix . '_' . uniqid('', true) . '.pdf';
+        file_put_contents($path, $pdfBinary);
+        $files[] = $path;
+        $merger->addFile($path);
     }
 
     private function buildLegacyBoldContext(array $payload): array
@@ -600,12 +775,8 @@ class CalendarPdfController extends Controller
         }
 
         if (preg_match('/^https?:\/\//i', $src)) {
-            $accessible = @getimagesize($src);
-            if ($accessible !== false) {
-                return $src;
-            }
-
-            return $placeholderImage;
+            // Do not probe remote images synchronously (slow + timeout risk on bulk export).
+            return $src;
         }
 
         if (preg_match('/^data:image\//i', $src)) {
