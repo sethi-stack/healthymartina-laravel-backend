@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\V1\Filters\FilterBookmarkController;
 */
 
 Route::prefix('v1')->group(function () {
+    Route::post('/internal/calendars/export/pdf/render', [CalendarPdfController::class, 'renderForExternalService'])
+        ->name('api.v1.internal.calendars.export.pdf.render');
     
     // Public routes (Authentication)
     Route::prefix('auth')->group(function () {

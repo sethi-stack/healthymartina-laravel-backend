@@ -47,4 +47,18 @@ class ExternalPdfExportService
 
         return $baseUrl . '/jobs/' . urlencode($externalJobId) . '/download';
     }
+
+    public function downloadBinary(string $externalJobId): array
+    {
+        $response = Http::timeout((int) config('pdf_export.http_timeout_seconds', 20))
+            ->get($this->downloadUrl($externalJobId));
+
+        $response->throw();
+
+        return [
+            'body' => $response->body(),
+            'content_type' => $response->header('Content-Type', 'application/pdf'),
+            'content_disposition' => $response->header('Content-Disposition'),
+        ];
+    }
 }

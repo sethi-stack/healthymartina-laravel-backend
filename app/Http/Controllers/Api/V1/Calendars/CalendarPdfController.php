@@ -192,14 +192,6 @@ class CalendarPdfController extends Controller
 
         $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
 
-        $payload = $this->buildExportPayload(
-            $calendar,
-            $validated['export_param'],
-            $this->normalizeTemplate($validated['template'] ?? 'classic'),
-            $validated['hero_recipe_id'] ?? null,
-            $validated['selected_recipes'] ?? []
-        );
-
         $job = CalendarExportJob::create([
             'job_id' => (string) Str::uuid(),
             'user_id' => Auth::id(),
@@ -211,10 +203,22 @@ class CalendarPdfController extends Controller
         ]);
 
         try {
+            $payload = $this->buildExternalServicePayload($calendar, $validated);
+            Log::info('calendar_export.external_payload.summary', [
+                'job_id' => $job->job_id,
+                'calendar_id' => $calendar->id,
+                'template' => $payload['template'] ?? null,
+                'export_param' => $payload['export_param'] ?? [],
+                'selected_recipes_count' => count($payload['selected_recipes'] ?? []),
+                'recipe_pages_count' => count($payload['recipePages'] ?? []),
+                'nutrition_days_count' => count($payload['nutritionByDay'] ?? []),
+                'lista_categories_count' => count($payload['listaData']['categories'] ?? []),
+            ]);
             $externalPayload = [
                 'job_id' => $job->job_id,
                 'user_id' => Auth::id(),
                 'calendar_id' => $calendar->id,
+                'request_payload' => $validated,
                 'payload' => $payload,
             ];
             $serviceResponse = $externalPdfExportService->enqueue($externalPayload);
@@ -235,10 +239,71 @@ class CalendarPdfController extends Controller
             ]);
         }
 
+        if ($job->status === 'failed') {
+            return response()->json([
+                'success' => false,
+                'job_id' => $job->job_id,
+                'status' => $job->status,
+                'message' => 'No se pudo iniciar la exportación asíncrona.',
+            ], 502);
+        }
+
         return response()->json([
             'success' => true,
             'job_id' => $job->job_id,
             'status' => $job->status,
+        ]);
+    }
+
+    public function renderForExternalService(Request $request)
+    {
+        $token = (string) config('pdf_export.internal_token');
+        $incoming = (string) $request->header('X-Internal-Token', '');
+        if (empty($token) || !hash_equals($token, $incoming)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized internal render request.',
+            ], 401);
+        }
+
+        $this->prepareExportRuntimeLimits();
+
+        $validated = $request->validate([
+            'user_id' => 'required|integer',
+            'calendar_id' => 'required|integer',
+            'request_payload' => 'required|array',
+            'request_payload.export_param' => 'required|array|min:1',
+            'request_payload.export_param.*' => 'integer|in:1,2,4',
+            'request_payload.template' => 'nullable|in:classic,modern,bold,basic,advanced',
+            'request_payload.hero_recipe_id' => 'nullable|integer',
+            'request_payload.selected_recipes' => 'nullable|array',
+            'request_payload.selected_recipes.*' => 'integer',
+        ]);
+
+        Auth::onceUsingId((int) $validated['user_id']);
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to impersonate user for internal render.',
+            ], 422);
+        }
+
+        $req = $validated['request_payload'];
+        $calendar = Auth::user()->calendars()->findOrFail((int) $validated['calendar_id']);
+
+        $payload = $this->buildExportPayload(
+            $calendar,
+            $req['export_param'],
+            $this->normalizeTemplate($req['template'] ?? 'classic'),
+            $req['hero_recipe_id'] ?? null,
+            $req['selected_recipes'] ?? []
+        );
+
+        $pdfBinary = $this->renderExportPdf($payload);
+
+        return response($pdfBinary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="calendar-' . $calendar->id . '.pdf"',
         ]);
     }
 
@@ -293,7 +358,26 @@ class CalendarPdfController extends Controller
             ], 404);
         }
 
-        return redirect()->away($externalPdfExportService->downloadUrl($job->external_job_id));
+        try {
+            $download = $externalPdfExportService->downloadBinary((string) $job->external_job_id);
+            $filename = ($job->calendar_id ? 'calendar-' . $job->calendar_id : 'calendario') . '.pdf';
+
+            return response($download['body'], 200, [
+                'Content-Type' => $download['content_type'] ?: 'application/pdf',
+                'Content-Disposition' => $download['content_disposition'] ?: ('attachment; filename="' . $filename . '"'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('calendar_export.job.download_failed', [
+                'job_id' => $job->job_id,
+                'external_job_id' => $job->external_job_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo descargar el archivo exportado.',
+            ], 502);
+        }
     }
 
     private function hydrateJobFromExternalStatus(
@@ -322,6 +406,168 @@ class CalendarPdfController extends Controller
         }
 
         $job->save();
+    }
+
+    private function buildExternalServicePayload(Calendar $calendar, array $validated): array
+    {
+        $exportParams = $validated['export_param'] ?? [];
+        $template = $this->normalizeTemplate($validated['template'] ?? 'classic');
+        $mainSchedule = json_decode($calendar->main_schedule, true) ?? [];
+        $sidesSchedule = json_decode($calendar->sides_schedule, true) ?? [];
+        $mainServings = json_decode($calendar->main_servings, true) ?? [];
+        $sidesServings = json_decode($calendar->sides_servings, true) ?? [];
+        $mainRacion = json_decode($calendar->main_racion, true) ?? [];
+        $sidesRacion = json_decode($calendar->sides_racion, true) ?? [];
+        $mainLeftovers = json_decode($calendar->main_leftovers, true) ?? [];
+        $sidesLeftovers = json_decode($calendar->sides_leftovers, true) ?? [];
+        $labels = json_decode($calendar->labels, true) ?? [];
+        [$calendarRecipeIds] = $this->collectCalendarRecipeIds($mainSchedule, $sidesSchedule, $mainServings, $sidesServings);
+        $selected = array_values(array_filter(array_map('intval', $validated['selected_recipes'] ?? [])));
+        $heroRecipeId = !empty($validated['hero_recipe_id']) ? (int) $validated['hero_recipe_id'] : null;
+        if (empty($selected)) {
+            $selected = $calendarRecipeIds;
+        }
+        if (empty($selected) && !empty($calendarRecipeIds)) {
+            $selected = $calendarRecipeIds;
+        }
+        if ($heroRecipeId) {
+            $selected = array_values(array_filter($selected, fn ($id) => (int) $id !== $heroRecipeId));
+        }
+        $recipeIdsToLoad = array_values(array_unique(array_filter(array_merge($calendarRecipeIds, $selected, $heroRecipeId ? [$heroRecipeId] : []))));
+        $recipes = empty($recipeIdsToLoad)
+            ? collect()
+            : Receta::query()
+                ->whereIn('id', $recipeIdsToLoad)
+                ->get()
+                ->keyBy('id');
+
+        $recipesMap = [];
+        foreach ($recipes as $id => $recipe) {
+            $recipesMap[(string) $id] = [
+                'id' => (int) $recipe->id,
+                'titulo' => (string) ($recipe->titulo ?? ''),
+                'imagen_principal' => (string) ($recipe->imagen_principal ?? ''),
+            ];
+        }
+
+        $recipePages = [];
+        foreach ($selected as $recipeId) {
+            $recipe = $recipes[$recipeId] ?? null;
+            if (!$recipe) {
+                continue;
+            }
+
+            $portion = $recipe->getPorciones()['cantidad'] ?? 1;
+            $ingredients = $this->scaleRecipeIngredients($recipe, $portion);
+            $nutrition = $this->scaleRecipeNutrition($recipe, $portion);
+            $nutritionRows = [];
+            foreach (($nutrition['info'] ?? []) as $nutrient) {
+                if (!empty($nutrient['mostrar'])) {
+                    $nutritionRows[] = [
+                        'nombre' => $nutrient['nombre'] ?? 'Nutriente',
+                        'cantidad' => isset($nutrient['cantidad']) ? round((float) $nutrient['cantidad'], 2) : null,
+                        'unidad_medida' => $nutrient['unidad_medida'] ?? '',
+                    ];
+                }
+            }
+
+            $recipePages[] = [
+                'recipe' => [
+                    'id' => (int) $recipe->id,
+                    'titulo' => (string) ($recipe->titulo ?? ''),
+                    'imagen_principal' => (string) ($recipe->imagen_principal ?? ''),
+                    'instrucciones' => array_values($recipe->getInstrucciones() ?? []),
+                    'tips' => (string) ($recipe->tips ?? ''),
+                ],
+                'ingredients' => array_map(function ($ingredient) {
+                    return [
+                        'ingrediente' => $ingredient['ingrediente'] ?? ($ingredient['nombre'] ?? 'Ingrediente'),
+                        'cantidad' => $ingredient['cantidad'] ?? null,
+                        'medida' => $ingredient['medida'] ?? ($ingredient['unidad'] ?? ''),
+                        'unidad' => $ingredient['unidad'] ?? ($ingredient['medida'] ?? ''),
+                    ];
+                }, $ingredients),
+                'nutrition' => $nutritionRows,
+            ];
+        }
+
+        $nutritionByDay = [];
+        if (in_array(4, $exportParams, true)) {
+            $legacy = new LegacyCalendarController();
+            $dayMap = [
+                'day_1' => 'Lunes', 'day_2' => 'Martes', 'day_3' => 'Miércoles', 'day_4' => 'Jueves',
+                'day_5' => 'Viernes', 'day_6' => 'Sábado', 'day_7' => 'Domingo',
+            ];
+            foreach ($dayMap as $dayKey => $dayLabel) {
+                $nutrition = $legacy->nutriInfo($dayKey, (int) $calendar->id, true);
+                $rows = [];
+                foreach ((array) $nutrition as $entry) {
+                    if (!is_array($entry) || count($entry) < 6) {
+                        continue;
+                    }
+                    $rows[] = [
+                        'id' => isset($entry[0]) ? (int) $entry[0] : null,
+                        'nombre' => isset($entry[1]) ? (string) $entry[1] : 'Nutriente',
+                        'unidad_medida' => isset($entry[2]) ? (string) $entry[2] : '',
+                        'cantidad' => isset($entry[3]) ? round((float) $entry[3], 2) : 0,
+                        'porcentaje' => isset($entry[4]) ? round((float) $entry[4], 2) : null,
+                        'color' => isset($entry[5]) ? (string) $entry[5] : '',
+                    ];
+                }
+                $nutritionByDay[] = [
+                    'day_key' => $dayKey,
+                    'label' => $labels['days'][$dayKey] ?? $dayLabel,
+                    'rows' => $rows,
+                ];
+            }
+        }
+
+        $listaPayload = ['categories' => [], 'taken_ids' => []];
+        if (in_array(2, $exportParams, true)) {
+            $listaData = $this->buildListaData($calendar);
+            $listaPayload = [
+                'taken_ids' => $listaData['taken_ids'] ?? [],
+                'categories' => array_map(function ($cat) {
+                    return [
+                        'name' => $cat['name'] ?? ($cat['nombre'] ?? 'Categoría'),
+                        'items' => array_map(function ($item) {
+                            return [
+                                'ingrediente_id' => $item['ingrediente_id'] ?? null,
+                                'nombre' => $item['nombre'] ?? ($item['ingrediente'] ?? 'Ingrediente'),
+                                'cantidad' => $item['cantidad'] ?? null,
+                                'unidad' => $item['unidad'] ?? '',
+                            ];
+                        }, $cat['items'] ?? []),
+                    ];
+                }, $listaData['categories'] ?? []),
+            ];
+        }
+
+        return [
+            'template' => $template,
+            'export_param' => $exportParams,
+            'hero_recipe_id' => $heroRecipeId,
+            'heroRecipe' => $heroRecipeId && isset($recipesMap[(string) $heroRecipeId]) ? $recipesMap[(string) $heroRecipeId] : null,
+            'selected_recipes' => $selected,
+            'recipePages' => $recipePages,
+            'nutritionByDay' => $nutritionByDay,
+            'listaData' => $listaPayload,
+            'calendar_snapshot' => [
+                'id' => (int) $calendar->id,
+                'title' => (string) ($calendar->title ?? 'calendario'),
+                'labels' => $labels,
+                'main_schedule' => $mainSchedule,
+                'sides_schedule' => $sidesSchedule,
+                'main_servings' => $mainServings,
+                'sides_servings' => $sidesServings,
+                'main_racion' => $mainRacion,
+                'sides_racion' => $sidesRacion,
+                'main_leftovers' => $mainLeftovers,
+                'sides_leftovers' => $sidesLeftovers,
+                'recipe_ids' => $calendarRecipeIds,
+                'recipes_map' => $recipesMap,
+            ],
+        ];
     }
 
     /**
