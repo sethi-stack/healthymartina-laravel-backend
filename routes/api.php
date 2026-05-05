@@ -70,6 +70,7 @@ Route::prefix('v1')->group(function () {
         // Recipe routes
         Route::prefix('recipes')->group(function () {
             Route::get('/', [RecipeController::class, 'index'])->name('api.v1.recipes.index');
+            Route::get('/bulk', [RecipeController::class, 'bulk'])->name('api.v1.recipes.bulk');
             Route::get('/search', [RecipeController::class, 'search'])->name('api.v1.recipes.search');
             Route::get('/popular', [RecipeController::class, 'popular'])->name('api.v1.recipes.popular');
             Route::get('/bookmarks', [RecipeController::class, 'bookmarks'])->name('api.v1.recipes.bookmarks');
@@ -120,6 +121,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/{id}/labels', [CalendarController::class, 'updateLabels'])->where('id', '[0-9]+')->name('api.v1.calendars.labels');
 
             // Calendar nutrition info
+            Route::get('/{id}/nutrition', [CalendarController::class, 'getNutritionSummary'])->where('id', '[0-9]+')->name('api.v1.calendars.nutrition.summary');
             Route::get('/{id}/nutrition/{dayId}', [CalendarController::class, 'getNutritionInfo'])->where('id', '[0-9]+')->name('api.v1.calendars.nutrition');
 
             // Calendar schedules

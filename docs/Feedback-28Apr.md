@@ -60,7 +60,7 @@ TESTING software upgrade
 - I can drag the recipe, but when I try to drop it somewhere else, it goes back to its original place. :white_check_mark: but it looks like it’s dragging the recipe below to (at the end it just drops the one that it supposed to drop
 - If I manually add a recipe to a slot (for example, adding a breakfast on Monday without using the full-week edit/block view), and that same slot already had recipes on other days (like Saturday), those existing entries get deleted if I don’t revalidate or confirm them in the full-week view.:white_check_mark:
 - When I click on the nutrition insights of the calendar, nothing happens — the feature doesn’t respond yet.:white_check_mark: it shows the window :x: BUT not the details
-- The calendar is not exporting the cover or the recipes, and the current export format does not match the one we plan to use. :x:It doesn’t have images and the format it’s not correctly file:///Users/cristinaarvizu/Downloads/NUEVO%20(3).pdf
+- The calendar is not exporting the cover or the recipes, and the current export format does not match the one we plan to use. :white_check_mark: PDF export theme/format now matches target :x: It still doesn’t have images file:///Users/cristinaarvizu/Downloads/NUEVO%20(3).pdf
   - :bangbang:it didn’t work with 9 recipe just with 3
   - *This feature needs to be completely frictionless since it’s the one they’ll be using the most.*
 - It is not possible to add ingredients, validate existing items in the list, or export/send the grocery list by email. I:white_check_mark: can add an ingredient but :x:not the measure form (cup, pices etc) :x:doesn’t export or email list
@@ -80,7 +80,7 @@ TESTING software upgrade
 - Plans section now accessible and mostly wired.
 
 ### Reopened / still failing
-- `REOPEN P2.6` Calendar export still missing images/cover, format mismatch, and fails with larger recipe counts.
+- `REOPEN P2.6` Calendar export theme/format is done, but export still misses images/cover and fails with larger recipe counts.
 - `REOPEN P0.5` Grocery list still missing measure/unit input parity and export/email remains broken.
 
 ### New bugs found in this pass
@@ -112,7 +112,7 @@ TESTING software upgrade
 - `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
 - `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
 - `21` Nutrition insights unresponsive → `SOLVED` (`P2.5 DONE`, 2026-05-04).
-- `22` Calendar export incomplete/mismatch → `P2.6` → `REOPENED / HIGH RISK`.
+- `22` Calendar export incomplete/mismatch → `P2.6` → `PARTIAL` (`THEME/FORMAT DONE`, 2026-05-05; images/cover/large export stability still open).
 - `23` Grocery list core actions unavailable → `P0.5` → `REOPENED` (partial only).
 - `24` Plans section not ready → `P3.1` → `DEFERRED`.
 - Add-to-calendar target calendar selector missing → `P1.7` → `NEW`.
@@ -194,9 +194,9 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 4. **Portions button not responding** (servings/portions toggle behavior needs review).
 5. **Nutrition insights interaction/details incomplete** - `DONE` (2026-05-04)
    - Modal/details payload rendering fixed.
-6. **Calendar export format/content incomplete** - `REOPENED / HIGH RISK` (2026-05-04)
+6. **Calendar export format/content incomplete** - `PARTIAL / HIGH RISK` (updated 2026-05-05)
    - Missing cover and recipes in export.
-   - Export format not yet matching target format.
+   - Export theme/format now matches target (`DONE`, 2026-05-05).
    - Fails on larger recipe counts (reported: 9 fails, 3 works).
 7. **Portions value not shown on calendar card** - `NEW` (2026-05-04)
 8. **Drag preview ghost artifact** - `NEW` (2026-05-04)

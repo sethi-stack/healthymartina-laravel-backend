@@ -221,6 +221,53 @@ class CalendarController extends Controller
      */
     public function getNutritionInfo(Request $request, int $id, string $dayId): JsonResponse
     {
+        [$calendar, $visibleInfo, $filterInfo] = $this->resolveNutritionContext($request, $id);
+
+        // Get nutrition data for the day using helper function
+        $nutritionData = [];
+        if (function_exists('getDayNutritionData')) {
+            $nutritionData = getDayNutritionData($dayId, $calendar, $visibleInfo, $filterInfo);
+        }
+
+        return response()->json([
+            'success' => true,
+            'day_id' => $dayId,
+            'nutrition' => $nutritionData,
+        ]);
+    }
+
+    /**
+     * Get nutritional information for all calendar days in one request.
+     */
+    public function getNutritionSummary(Request $request, int $id): JsonResponse
+    {
+        [$calendar, $visibleInfo, $filterInfo] = $this->resolveNutritionContext($request, $id);
+
+        $days = ['day_1', 'day_2', 'day_3', 'day_4', 'day_5', 'day_6', 'day_7'];
+        $nutrition = [];
+
+        if (function_exists('getDayNutritionData')) {
+            foreach ($days as $dayId) {
+                $nutrition[$dayId] = [
+                    'day_id' => $dayId,
+                    'nutrition' => getDayNutritionData($dayId, $calendar, $visibleInfo, $filterInfo),
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'nutrition' => $nutrition,
+        ]);
+    }
+
+    /**
+     * Resolve calendar and nutrition preference context for nutrition endpoints.
+     *
+     * @return array{0:\App\Models\Calendar,1:array<int,mixed>,2:array<int,mixed>}
+     */
+    protected function resolveNutritionContext(Request $request, int $id): array
+    {
         $calendar = Auth::user()->calendars()->find($id);
 
         // Allow read-only nutrition access for plan template calendars
@@ -243,19 +290,15 @@ class CalendarController extends Controller
             abort(404);
         }
 
-        // Get user's nutritional preferences
         $nutritionalInfo = \DB::table('nutritional_preferences')
             ->where('user_id', Auth::id())
             ->first();
 
         $visibleInfo = [];
         $filterInfo = [];
-
-        if ($nutritionalInfo) {
-            $info = json_decode($nutritionalInfo->nutritional_info);
-        } else {
-            $info = json_decode(json_encode(config('constants.nutritients', [])), false);
-        }
+        $info = $nutritionalInfo
+            ? json_decode($nutritionalInfo->nutritional_info)
+            : json_decode(json_encode(config('constants.nutritients', [])), false);
 
         if ($info) {
             foreach ($info as $value) {
@@ -266,17 +309,7 @@ class CalendarController extends Controller
             }
         }
 
-        // Get nutrition data for the day using helper function
-        $nutritionData = [];
-        if (function_exists('getDayNutritionData')) {
-            $nutritionData = getDayNutritionData($dayId, $calendar, $visibleInfo, $filterInfo);
-        }
-
-        return response()->json([
-            'success' => true,
-            'day_id' => $dayId,
-            'nutrition' => $nutritionData,
-        ]);
+        return [$calendar, $visibleInfo, $filterInfo];
     }
 
     /**

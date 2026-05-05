@@ -44,6 +44,32 @@ class RecipeController extends Controller
     }
 
     /**
+     * Return a lightweight collection of recipes by ID.
+     */
+    public function bulk(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'integer|exists:recetas,id',
+        ]);
+
+        $recipeIds = array_values(array_unique(array_map('intval', $validated['ids'])));
+
+        $recipes = Receta::query()
+            ->whereIn('id', $recipeIds)
+            ->with(['tags'])
+            ->get()
+            ->sortBy(function ($recipe) use ($recipeIds) {
+                return array_search((int) $recipe->id, $recipeIds, true);
+            })
+            ->values();
+
+        return response()->json([
+            'data' => RecipeListResource::collection($recipes)->resolve(),
+        ]);
+    }
+
+    /**
      * Display the specified recipe by slug.
      */
     public function show(string $slug): RecipeResource
@@ -248,4 +274,3 @@ class RecipeController extends Controller
         ]);
     }
 }
-
