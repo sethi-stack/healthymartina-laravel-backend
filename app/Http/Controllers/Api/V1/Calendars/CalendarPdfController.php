@@ -118,7 +118,7 @@ class CalendarPdfController extends Controller
         if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
             return response()->json([
                 'success' => false,
-                'message' => 'El correo electrónico del destinatario no es válido',
+                'message' => 'Su correo eléctronico no es valido....',
             ], 422);
         }
 
@@ -174,7 +174,7 @@ class CalendarPdfController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Se envio por mail exitosamente',
+            'message' => '¡El envío de correo ha concluido con éxito!',
         ]);
     }
 
@@ -333,7 +333,11 @@ class CalendarPdfController extends Controller
             'status' => $job->status,
             'progress' => $job->progress,
             'error' => $job->error_message,
+            'error_message' => $job->error_message,
             'file_url' => $job->file_url,
+            'message' => $job->status_payload['message'] ?? $job->status_payload['stage']['message'] ?? null,
+            'stage' => $job->status_payload['stage'] ?? null,
+            'counters' => $job->status_payload['counters'] ?? null,
         ]);
     }
 
