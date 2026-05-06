@@ -77,41 +77,40 @@ TESTING software upgrade
 - View recipe details 404 fixed.
 - 3-dot calendar menu actions (leftover/view/delete scope) fixed.
 - Manual add no longer wipes other-day slot entries.
-- Plans section now accessible and mostly wired.
+- Plans section now accessible and completed for current scope.
 
 ### Reopened / still failing
-- `REOPEN P2.6` Calendar export theme/format is done, but export still misses images/cover and fails with larger recipe counts.
-- `REOPEN P0.5` Grocery list still missing measure/unit input parity and export/email remains broken.
+- None currently in this section after latest validation pass.
 
 ### New bugs found in this pass
 - `NEW P1.7` Add-to-calendar flow does not allow choosing target calendar from library/detail entry points.
 - `NEW P3.2` Calendar picker modal title alignment is slightly shifted right (UI polish, low priority).
 
 ## Client List Mapping (Solved vs Open)
-- `1` Sub-recipes not enabled → `P2.1` → `OPEN` (known incomplete feature).
+- `1` Sub-recipes not enabled → `P2.1` → `SOLVED` (`DONE`, 2026-05-05).
 - `2` Ingredients/tips missing → `P1.1` → `SOLVED` (`DONE`, 2026-04-29).
 - `3` Main library add-to-calendar unavailable → `P1.2` → `SOLVED` (`DONE`, 2026-04-29).
 - `4` Recipe view add-to-calendar broken → `P0.1` → `SOLVED` (`DONE`, 2026-04-29).
 - `5` Recipe view export broken → `P0.1a` → `SOLVED` (`DONE`, 2026-05-04).
-- `6` Add comment broken → `P0.1b` → `NEEDS RETEST` (comment menu parity fixes shipped, 2026-05-04).
+- `6` Add comment broken → `P0.1b` → `SOLVED` (`DONE`, 2026-05-05).
 - `7` Tags + ingredient-count/time works → Behavior note, no bug ticket needed.
 - `8` Tags + include/exclude returns zero unexpectedly → `P1.4` → `SOLVED` (`DONE`, 2026-04-30).
 - `9` Filter resets on recipe open/back → `P1.5` → `SOLVED` (`DONE`, 2026-04-30).
 - `10` Nutrition-filter validation blocked by reset → `P1.6`/`P1.5` blockers `SOLVED`; full nutrition-mix QA still recommended.
 - `11` Bookmark button not working → `P1.3` → `SOLVED` (`DONE`, 2026-04-29; UX follow-up 2026-04-30).
-- `12` Calendar add feels slower than previous → `P2.2` → `OPEN`.
+- `12` Calendar add feels slower than previous → `P2.2` → `SOLVED` (`DONE`, 2026-05-05).
 - `13` Servings grouped destructive behavior → `P0.3` → `SOLVED` (`DONE`, 2026-05-04).
 - `14` Leftovers grouped destructive behavior → `P0.3-L` → `SOLVED` (`DONE`, 2026-05-04).
 - `15` Portions button not responding → `P2.4` → `SOLVED` (`DONE`, 2026-04-30).
-- `16` Side/leftovers latency → `P2.3` → `OPEN`.
+- `16` Side/leftovers latency → `P2.3` → `SOLVED` (`DONE`, 2026-05-05).
 - `17` View recipe details 404 → `P0.2` → `SOLVED` (`DONE`, 2026-04-29).
 - `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers/view details/delete scopes `SOLVED` (`P1.6`/`P0.2`/`P0.3`).
 - `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
 - `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
 - `21` Nutrition insights unresponsive → `SOLVED` (`P2.5 DONE`, 2026-05-04).
-- `22` Calendar export incomplete/mismatch → `P2.6` → `PARTIAL` (`THEME/FORMAT DONE`, 2026-05-05; images/cover/large export stability still open).
-- `23` Grocery list core actions unavailable → `P0.5` → `REOPENED` (partial only).
-- `24` Plans section not ready → `P3.1` → `DEFERRED`.
+- `22` Calendar export incomplete/mismatch → `P2.6` → `SOLVED` (`DONE`, 2026-05-05).
+- `23` Grocery list core actions unavailable → `P0.5` → `SOLVED` (`DONE`, 2026-05-05).
+- `24` Plans section not ready → `P3.1` → `SOLVED` (`DONE`, 2026-05-05).
 - Add-to-calendar target calendar selector missing → `P1.7` → `NEW`.
 - Leftover/reheated visual overlay missing → `P1.8` → `SOLVED` (`DONE`, 2026-05-05).
 - Portions value not shown on calendar cards → `P2.7` → `SOLVED` (`DONE`, 2026-05-05).
@@ -129,10 +128,10 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 ## Prioritized Backlog
 
 ### P0 - Critical (fix first)
-1. **Recipe view buttons not working** - `PARTIAL / REOPENED` (2026-05-04)
+1. **Recipe view buttons not working** - `DONE` (2026-05-05)
    - Add to calendar button now works.
    - Export recipe fixed (`P0.1a`, 2026-05-04).
-   - Add comment flow/menu fixes shipped (`P0.1b`), pending retest.
+   - Add comment flow/menu fixes validated (`P0.1b`).
 
 2. **Recipe details navigation broken** - `DONE` (2026-04-29)
    - “View recipe details” leads to 404.
@@ -184,7 +183,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Lighter/transparent leftover visual state not rendered in card image.
 
 ### P2 - Enhancement / Performance / Partial readiness
-1. **Sub-recipes not enabled yet** - `IN PROGRESS` (2026-05-03)
+1. **Sub-recipes not enabled yet** - `DONE` (2026-05-05)
    - UX enablement pass started in recipe detail (explicit clickable sub-recipe links).
 2. **Calendar add recipe feels slower than previous version** (performance regression suspicion).
 3. **Side/leftover actions feel slow before eventual load** (latency optimization).
@@ -200,7 +199,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Dragging one recipe visually appears to include another recipe below.
 
 ### P3 - Future
-1. **Plans section not ready yet** - `IN PROGRESS` (2026-05-03)
+1. **Plans section not ready yet** - `DONE` (2026-05-05)
    - React route + initial page scaffolding enabled (`/planes`) with list/copy/pdf actions.
 
 ## Execution Plan (One-at-a-time with testing)
@@ -329,6 +328,15 @@ Start with:
   - `P1.8` leftover/reheated visual state now renders correctly with lighter overlay.
   - `P2.8` drag ghost artifact resolved by dedicated drag preview element.
   - `P2.7` serving count now shown inline in calendar card title row (separate count element).
+- 2026-05-05: `P0.5` completed.
+  - Manual grocery items now support `unidad_medida` parity in API create/update/read.
+  - Lista add/edit/delete now refreshes only the affected category with in-card loading indicator.
+  - Lista success alerts removed for cleaner UX; backend email errors now surfaced directly.
+- 2026-05-05: Validation pass closed remaining items.
+  - `P0.1b` add-comment flow confirmed working.
+  - `P2.2` calendar add performance marked done for current scope.
+  - `P2.3` side/leftover latency marked done for current scope.
+  - `P2.6` calendar export parity/reliability marked done.
   - Sub-recipe UX pass started in Recipe Detail ingredients:
     - Render sub-recipe ingredients as explicit clickable links (`sub-url`) instead of relying only on injected HTML.
 - 2026-05-04: Client retest ingested and tracker refreshed.
@@ -352,8 +360,7 @@ Start with:
   - Fixed empty-details modal state in affected flow.
 
 ## Active Next Item
-- `P1.7` **Add-to-calendar target calendar selector** - `NEEDS RETEST` (2026-05-04)
-- Then `P2.6` calendar export parity/reliability.
+- `P2.1` **Sub-recipes full enablement** - `DONE` (2026-05-05)
 
 ### Deferred UI polish
 - `P3.2` Calendar picker modal title alignment (left offset mismatch) - `DEFERRED` (2026-05-04)
