@@ -90,6 +90,11 @@ apt install -y \
   php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring php8.3-xml \
   php8.3-curl php8.3-gd php8.3-zip php8.3-bcmath php8.3-intl \
   php8.3-gmp php8.3-tokenizer php8.3-fileinfo \
+  libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+  libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+  libnspr4 libnss3 libxshmfence1 libx11-xcb1 libxext6 libx11-6 libcairo2 \
+  libpango-1.0-0 libpangocairo-1.0-0 libc6 libglib2.0-0 libgtk-3-0 \
+  fonts-liberation xdg-utils \
   mysql-server \
   git \
   unzip \
@@ -1030,3 +1035,58 @@ Expected:
 - `/health` returns `ok`.
 - Laravel can create export jobs without 500 timeout.
 - Download/email endpoints complete for large calendars.
+
+### 17.8 First-run fixes (required for Puppeteer on fresh droplet)
+
+If async export fails on first deploy, run these one-time fixes.
+
+#### A) Directory permissions for `www-data`
+
+```bash
+sudo mkdir -p /var/www/healthymartina/api/pdf-export-service/storage
+sudo mkdir -p /var/www/healthymartina/api/pdf-export-service/tmp
+sudo mkdir -p /var/www/healthymartina/api/pdf-export-service/.cache/puppeteer
+sudo chown -R www-data:www-data /var/www/healthymartina/api/pdf-export-service
+sudo chmod -R 775 /var/www/healthymartina/api/pdf-export-service/storage
+sudo chmod -R 775 /var/www/healthymartina/api/pdf-export-service/tmp
+```
+
+#### B) Install Chrome shared libraries
+
+```bash
+sudo apt update
+sudo apt install -y \
+  libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+  libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+  libnspr4 libnss3 libxshmfence1 libx11-xcb1 libxext6 libx11-6 libcairo2 \
+  libpango-1.0-0 libpangocairo-1.0-0 libc6 libglib2.0-0 libgtk-3-0 \
+  fonts-liberation xdg-utils
+```
+
+#### C) Install Chrome for the service runtime user (`www-data`)
+
+```bash
+cd /var/www/healthymartina/api/pdf-export-service
+sudo -u www-data -H env PUPPETEER_CACHE_DIR=/var/www/healthymartina/api/pdf-export-service/.cache/puppeteer \
+  npx puppeteer browsers install chrome
+sudo -u www-data -H env PUPPETEER_CACHE_DIR=/var/www/healthymartina/api/pdf-export-service/.cache/puppeteer \
+  npx puppeteer browsers list
+```
+
+#### D) Restart and verify
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart pdf-export
+sudo systemctl status pdf-export --no-pager
+curl -i http://127.0.0.1:4300/health
+```
+
+If Laravel still reports `calendar_export.job.start_failed`, verify:
+
+```bash
+cd /var/www/healthymartina/api
+php artisan tinker --execute="dump(config('pdf_export.base_url'));"
+tail -n 120 storage/logs/laravel.log
+sudo journalctl -u pdf-export -n 120 --no-pager
+```

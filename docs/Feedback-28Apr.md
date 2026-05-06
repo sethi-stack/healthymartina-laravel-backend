@@ -85,6 +85,7 @@ TESTING software upgrade
 ### New bugs found in this pass
 - `NEW P1.7` Add-to-calendar flow does not allow choosing target calendar from library/detail entry points.
 - `NEW P3.2` Calendar picker modal title alignment is slightly shifted right (UI polish, low priority).
+- `NEW OPS.1` GitHub Actions backend deploy is not fully configured in repository secrets/variables (missing `DO_HOST` initially; SSH/deploy automation validation pending).
 
 ## Client List Mapping (Solved vs Open)
 - `1` Sub-recipes not enabled → `P2.1` → `SOLVED` (`DONE`, 2026-05-05).
@@ -124,6 +125,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 - `P1` High bug / missing expected feature (important flow degraded but not fully blocked)
 - `P2` Enhancement / performance / polish (works but needs optimization or completion)
 - `P3` Future scope (known not ready yet)
+- `OPS` Deployment/infra workflow task (CI/CD, secrets, server automation)
 
 ## Prioritized Backlog
 
