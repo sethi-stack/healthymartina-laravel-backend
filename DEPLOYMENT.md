@@ -896,3 +896,137 @@ These are created on the server and should not be copied from the repo as source
 5. Run `php8.3 artisan key:generate`, `storage:link`, and migrations
 6. Publish Backpack assets and language files
 7. Reload Nginx and PHP-FPM
+
+---
+
+## 17. PDF Export API (DigitalOcean Setup)
+
+This section deploys `pdf-export-service` on the same droplet and connects Laravel to it.
+
+### 17.1 Install Node.js (LTS)
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+node -v
+npm -v
+```
+
+### 17.2 Clone service and install dependencies
+
+```bash
+cd /var/www/healthymartina
+cd /var/www/healthymartina/api/pdf-export-service
+npm ci --omit=dev
+```
+
+### 17.3 Configure service env
+
+```bash
+cd /var/www/healthymartina/api/pdf-export-service
+cp .env.example .env
+nano .env
+```
+
+Recommended `.env` values:
+
+```env
+PORT=4300
+EXPORT_SHARED_SECRET=use-the-same-secret-as-laravel
+EXPORT_MAX_CONCURRENCY=2
+EXPORT_JOB_TIMEOUT_MS=180000
+EXPORT_HTML_RENDER_TIMEOUT_MS=120000
+EXPORT_IMAGE_WAIT_TIMEOUT_MS=45000
+STORAGE_DIR=./storage
+EXPORT_ALLOW_PDFKIT_FALLBACK=false
+```
+
+### 17.4 Run with systemd
+
+Create `/etc/systemd/system/pdf-export.service`:
+
+```ini
+[Unit]
+Description=HealthyMartina PDF Export Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/healthymartina/api/pdf-export-service
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+systemctl daemon-reload
+systemctl enable pdf-export
+systemctl restart pdf-export
+systemctl status pdf-export --no-pager
+```
+
+### 17.5 Optional Nginx reverse proxy
+
+If you want to expose it internally via Nginx (instead of direct `127.0.0.1:4300`), add:
+
+```nginx
+location /pdf-export/ {
+    proxy_pass http://127.0.0.1:4300/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Then reload Nginx:
+
+```bash
+nginx -t && systemctl reload nginx
+```
+
+### 17.6 Laravel API wiring
+
+In `/var/www/healthymartina/api/.env`:
+
+```env
+PDF_EXPORT_ASYNC_ENABLED=true
+PDF_EXPORT_SERVICE_URL=http://127.0.0.1:4300
+PDF_EXPORT_SHARED_SECRET=use-the-same-secret-as-node-service
+PDF_EXPORT_HTTP_TIMEOUT_SECONDS=180
+PDF_EXPORT_INTERNAL_TOKEN=
+```
+
+Apply config:
+
+```bash
+cd /var/www/healthymartina/api
+php artisan config:clear
+php artisan config:cache
+```
+
+### 17.7 Validation checklist
+
+```bash
+# Service health
+curl -sS http://127.0.0.1:4300/health
+
+# Service logs
+journalctl -u pdf-export -f
+
+# Laravel logs during export
+tail -f /var/www/healthymartina/api/storage/logs/laravel.log
+```
+
+Expected:
+- `/health` returns `ok`.
+- Laravel can create export jobs without 500 timeout.
+- Download/email endpoints complete for large calendars.
