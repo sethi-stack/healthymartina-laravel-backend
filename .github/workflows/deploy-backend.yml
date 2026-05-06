@@ -18,12 +18,6 @@ jobs:
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
           script: |
-            cd /var/www/healthymartina/laravel-backend-app
-            git pull origin main
-            composer install --no-dev --optimize-autoloader --no-interaction
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            sudo systemctl reload php8.2-fpm
+            cd /var/www/healthymartina/api
+            bash scripts/deploy.sh
             echo "Deploy complete: $(date)"
