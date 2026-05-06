@@ -73,7 +73,7 @@ TESTING software upgrade
 - Add-to-calendar from recipe detail works.
 - Filter combos and filter persistence are resolved.
 - Bookmark flow works.
-- Drag/drop now persists (visual drag-ghost issue still open).
+- Drag/drop now persists and drag visual is acceptable for current scope.
 - View recipe details 404 fixed.
 - 3-dot calendar menu actions (leftover/view/delete scope) fixed.
 - Manual add no longer wipes other-day slot entries.
@@ -105,7 +105,7 @@ TESTING software upgrade
 - `16` Side/leftovers latency → `P2.3` → `SOLVED` (`DONE`, 2026-05-05).
 - `17` View recipe details 404 → `P0.2` → `SOLVED` (`DONE`, 2026-04-29).
 - `18` Calendar 3-dot menu leftovers/view details/delete issues → leftovers/view details/delete scopes `SOLVED` (`P1.6`/`P0.2`/`P0.3`).
-- `19` Drag/drop reverts → `P0.4` → `PARTIAL` (`DONE WITH OPEN UI BUG`, 2026-04-29).
+- `19` Drag/drop reverts → `P0.4` → `SOLVED` (`DONE`, 2026-05-05).
 - `20` Manual add deletes other-day slot entries → `P0.3` → `SOLVED` (`DONE`, 2026-04-29).
 - `21` Nutrition insights unresponsive → `SOLVED` (`P2.5 DONE`, 2026-05-04).
 - `22` Calendar export incomplete/mismatch → `P2.6` → `SOLVED` (`DONE`, 2026-05-05).
@@ -144,9 +144,9 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Deleting one instance from menu deletes all matching instances across days/slot.
    - Manually adding one slot can delete existing entries in same slot on other days.
 
-4. **Drag and drop cannot complete move** - `DONE WITH OPEN UI BUG` (2026-04-29)
+4. **Drag and drop cannot complete move** - `DONE` (2026-05-05)
    - Item returns to original position after drop.
-   - Open bug: drag preview shows extra height at bottom while dragging.
+   - Current accepted behavior: drag preview shows title-only ghost.
 
 5. **Grocery list core actions unavailable** - `REOPENED` (2026-05-04)
    - Cannot add ingredients.
