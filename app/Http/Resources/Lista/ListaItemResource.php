@@ -18,6 +18,7 @@ class ListaItemResource extends JsonResource
             'id' => $this->id,
             'calendario_id' => $this->calendario_id,
             'cantidad' => $this->cantidad,
+            'unidad_medida' => $this->unidad_medida,
             'nombre' => $this->nombre,
             'categoria' => $this->categoria,
             'created_at' => $this->created_at?->toISOString(),
@@ -25,5 +26,4 @@ class ListaItemResource extends JsonResource
         ];
     }
 }
-
 

@@ -85,9 +85,6 @@ TESTING software upgrade
 
 ### New bugs found in this pass
 - `NEW P1.7` Add-to-calendar flow does not allow choosing target calendar from library/detail entry points.
-- `NEW P1.8` Leftover/reheated visual state not rendered (transparent/lighter overlay image missing) in recipe/calendar cards.
-- `NEW P2.7` Portions now toggles, but portion value is not displayed on calendar card UI.
-- `NEW P2.8` Drag preview appears to include the recipe below while dragging (visual ghost artifact).
 - `NEW P3.2` Calendar picker modal title alignment is slightly shifted right (UI polish, low priority).
 
 ## Client List Mapping (Solved vs Open)
@@ -116,9 +113,9 @@ TESTING software upgrade
 - `23` Grocery list core actions unavailable → `P0.5` → `REOPENED` (partial only).
 - `24` Plans section not ready → `P3.1` → `DEFERRED`.
 - Add-to-calendar target calendar selector missing → `P1.7` → `NEW`.
-- Leftover/reheated visual overlay missing → `P1.8` → `NEW`.
-- Portions value not shown on calendar cards → `P2.7` → `NEW`.
-- Drag ghost preview artifact while dragging → `P2.8` → `NEW`.
+- Leftover/reheated visual overlay missing → `P1.8` → `SOLVED` (`DONE`, 2026-05-05).
+- Portions value not shown on calendar cards → `P2.7` → `SOLVED` (`DONE`, 2026-05-05).
+- Drag ghost preview artifact while dragging → `P2.8` → `SOLVED` (`DONE`, 2026-05-05).
 
 ## Goal
 Track initial QA feedback, prioritize by criticality, and execute fixes one at a time with testing checkpoints between each implementation.
@@ -328,6 +325,10 @@ Start with:
     - `GET /plans/{id}`
     - `POST /plans/{id}/copy`
     - `GET /plans/{id}/pdf`
+- 2026-05-05: Calendar card polish fixes completed.
+  - `P1.8` leftover/reheated visual state now renders correctly with lighter overlay.
+  - `P2.8` drag ghost artifact resolved by dedicated drag preview element.
+  - `P2.7` serving count now shown inline in calendar card title row (separate count element).
   - Sub-recipe UX pass started in Recipe Detail ingredients:
     - Render sub-recipe ingredients as explicit clickable links (`sub-url`) instead of relying only on injected HTML.
 - 2026-05-04: Client retest ingested and tracker refreshed.

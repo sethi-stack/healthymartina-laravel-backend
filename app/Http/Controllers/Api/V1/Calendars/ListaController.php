@@ -180,6 +180,7 @@ class ListaController extends Controller
 
         $validated = $request->validate([
             'cantidad' => 'required|numeric',
+            'unidad_medida' => 'required|string|max:50',
             'nombre' => 'required|string|max:255',
             'categoria' => 'required|integer|exists:categorias,id',
         ]);
@@ -187,6 +188,7 @@ class ListaController extends Controller
         $listaItem = ListaIngredientes::create([
             'calendario_id' => $calendar->id,
             'cantidad' => $validated['cantidad'],
+            'unidad_medida' => $validated['unidad_medida'],
             'nombre' => $validated['nombre'],
             'categoria' => $validated['categoria'],
         ]);
@@ -209,6 +211,7 @@ class ListaController extends Controller
 
         $validated = $request->validate([
             'cantidad' => 'required|numeric',
+            'unidad_medida' => 'required|string|max:50',
             'nombre' => 'required|string|max:255',
             'categoria' => 'required|integer|exists:categorias,id',
         ]);
@@ -217,7 +220,12 @@ class ListaController extends Controller
             ->where('calendario_id', $calendar->id)
             ->firstOrFail();
 
-        $listaItem->update($validated);
+        $listaItem->update([
+            'cantidad' => $validated['cantidad'],
+            'unidad_medida' => $validated['unidad_medida'],
+            'nombre' => $validated['nombre'],
+            'categoria' => $validated['categoria'],
+        ]);
 
         return response()->json([
             'success' => true,
@@ -247,5 +255,4 @@ class ListaController extends Controller
         ]);
     }
 }
-
 
