@@ -229,10 +229,17 @@ class CalendarController extends Controller
             $nutritionData = getDayNutritionData($dayId, $calendar, $visibleInfo, $filterInfo);
         }
 
+        $includeRecipes = filter_var($request->query('include_recipes', false), FILTER_VALIDATE_BOOLEAN);
+        $recipeBreakdown = [];
+        if ($includeRecipes && function_exists('getDayNutritionRecipeBreakdown')) {
+            $recipeBreakdown = getDayNutritionRecipeBreakdown($dayId, $calendar, $visibleInfo);
+        }
+
         return response()->json([
             'success' => true,
             'day_id' => $dayId,
             'nutrition' => $nutritionData,
+            'nutrition_recipes' => $recipeBreakdown,
         ]);
     }
 

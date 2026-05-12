@@ -52,6 +52,7 @@ Source: client retest / final feedback.
 Status update on items from 2026-05-11:
 
 - `1` **Add-to-calendar adds to Monday too** → **FIXED (UI)**: Add-to-calendar modal no longer preselects Monday by default when opened from recipe library/menu.
+- `2` **Nutrition modal expandable per recipe** → **DONE (UI+API)**: nutrition details modal rows expand to show per-recipe contributions that add up to the day totals.
 - `5` **Lista export Server Error** → **MIGRATED / FIXED PATH**: lista export now runs via external Node export service flow; removed reliance on missing Laravel Dompdf view.
 - `6` **Export modal loader** → **DONE (UI)**: added loader while recipes are being fetched for export selection.
 - `7` **Leftovers shaded in export** → **DONE (PDF)**: leftovers now render greyed in weekly plan export.

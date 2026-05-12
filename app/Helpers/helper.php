@@ -715,6 +715,103 @@ function getDayNutritionData($daykey, $calendar, $visible_info, $filter_info)
     }, $return);
         return $returnTransformed;
 }
+
+/**
+ * Return per-nutrient per-recipe breakdown for a calendar day.
+ *
+ * Output shape:
+ * [
+ *   nutrientId => [
+ *     'unidad_medida' => 'g',
+ *     'recipes' => [
+ *       ['id' => 123, 'titulo' => '...', 'cantidad' => 12.3, 'unidad_medida' => 'g'],
+ *       ...
+ *     ]
+ *   ],
+ *   ...
+ * ]
+ */
+function getDayNutritionRecipeBreakdown($daykey, $calendar, $visible_info): array
+{
+    $cMains = json_decode($calendar->main_schedule, true) ?? [];
+    $cSides = json_decode($calendar->sides_schedule, true) ?? [];
+    $cMracion = json_decode($calendar->main_racion, true) ?? [];
+    $cSracion = json_decode($calendar->sides_racion, true) ?? [];
+
+    $mainDayData = $cMains[$daykey] ?? [];
+    $sidesDayData = $cSides[$daykey] ?? [];
+    $mainRacionDayData = $cMracion[$daykey] ?? [];
+    $sidesRacionDayData = $cSracion[$daykey] ?? [];
+
+    $recipeRacionMapping = [];
+    foreach ($mainDayData as $meal => $id) {
+        $recipeRacionMapping[$id] = $mainRacionDayData[$meal] ?? 1;
+    }
+    foreach ($sidesDayData as $meal => $id) {
+        $recipeRacionMapping[$id] = $sidesRacionDayData[$meal] ?? 1;
+    }
+
+    $allRecipeIds = array_values(array_filter((([...array_values($mainDayData), ...array_values($sidesDayData)]))));
+    if (count($allRecipeIds) === 0) {
+        return [];
+    }
+
+    $countsPerRecipe = array_count_values($allRecipeIds);
+    $recipes = Receta::whereIn('id', array_keys($countsPerRecipe))->get()->keyBy('id');
+
+    $breakdown = [];
+    foreach ($countsPerRecipe as $recipeId => $count) {
+        $recipe = $recipes[$recipeId] ?? null;
+        if (!$recipe) {
+            continue;
+        }
+
+        $racion = $recipeRacionMapping[$recipeId] ?? 1;
+        $nutrientes = $recipe->getInformacionNutrimental();
+        $info = $nutrientes['info'] ?? [];
+
+        for ($i = 0; $i < $count; $i++) {
+            foreach ($info as $nut) {
+                if (!isset($nut['id']) || !in_array($nut['id'], $visible_info)) {
+                    continue;
+                }
+
+                $nutId = (string) $nut['id'];
+                $unit = (string) ($nut['unidad_medida'] ?? '');
+                $amount = (float) ($nut['cantidad'] ?? 0) * (float) ($racion ?: 1);
+
+                if (!isset($breakdown[$nutId])) {
+                    $breakdown[$nutId] = [
+                        'unidad_medida' => $unit,
+                        'recipes' => [],
+                    ];
+                }
+
+                if (!isset($breakdown[$nutId]['recipes'][$recipeId])) {
+                    $breakdown[$nutId]['recipes'][$recipeId] = [
+                        'id' => (int) $recipe->id,
+                        'titulo' => (string) ($recipe->titulo ?? ''),
+                        'cantidad' => 0.0,
+                        'unidad_medida' => $unit,
+                    ];
+                }
+
+                $breakdown[$nutId]['recipes'][$recipeId]['cantidad'] += $amount;
+            }
+        }
+    }
+
+    // Normalize maps to lists + stable sort (highest contribution first).
+    foreach ($breakdown as $nutId => $data) {
+        $recipesList = array_values($data['recipes'] ?? []);
+        usort($recipesList, function ($a, $b) {
+            return ((float) ($b['cantidad'] ?? 0)) <=> ((float) ($a['cantidad'] ?? 0));
+        });
+        $breakdown[$nutId]['recipes'] = $recipesList;
+    }
+
+    return $breakdown;
+}
 function todaySpanishDay()
 {
     $day = date('l',time());
