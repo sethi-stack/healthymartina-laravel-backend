@@ -31,6 +31,32 @@ Use this section as the quickest reference to client-reported issues.
 ## Latest QA Update - 2026-05-04
 Source: client retest after recent deploy.
 
+## Latest QA Update - 2026-05-11
+Source: client retest / final feedback.
+
+1. Adding a recipe from **Add to Calendar** menu adds it to **Monday** by default too (unexpected extra add).
+2. Nutrition details modal from calendar should be expandable to show a list of each recipe contributing to that value (segregated).
+3. **Raciones** are not showing on export calendar PDF.
+4. Export calendar PDF footer:
+   - Footer logo is cut off.
+   - Footer right corner needs a background section with business name + email (match legacy), and advanced theme background treatment (to copy from legacy design).
+5. **Lista export** shows **Server Error**.
+6. Add a loader icon while loading recipes in the Export modal.
+7. Leftovers in export are not shaded/greyed.
+8. Kebab menus are not fixed on images when there is a side meal; on some screens they move down.
+9. Comments not working again: alert error; API says `"cancelled"`.
+10. Ración number should display as the first character before the recipe title; only show when `> 1`.
+11. TODO: verify email exports (confirm required setup / config).
+
+## Implementation Update - 2026-05-12
+Status update on items from 2026-05-11:
+
+- `5` **Lista export Server Error** → **MIGRATED / FIXED PATH**: lista export now runs via external Node export service flow; removed reliance on missing Laravel Dompdf view.
+- `8` **Kebab menu positioning** → **DONE (UI)**: calendar card kebab now stays pinned to the recipe image area (bottom-right) and keeps its dropdown above stacked cards.
+- `9` **Comments “cancelled” regression** → **MITIGATED**: comment creation no longer fails when mail transport times out; notification failures are logged. Frontend ignores benign request-cancel errors to avoid false alerts.
+- `10` **Ración number prefix** → **DONE (UI)**: ración now displays before the recipe title (only when `> 1`).
+- Email exports setup (`11`) → **DOCS ADDED**: deployment guide updated with DigitalOcean + Mailgun SMTP/API options; recommended `MAIL_PORT=2525` when 587 times out.
+
 ## Client Retest Snapshot (After First Test - Verbatim)
 HEALTHY MARTINA
 TESTING software upgrade

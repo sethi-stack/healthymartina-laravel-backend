@@ -11,6 +11,7 @@ use App\Notifications\CommentAnsweredNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CommentController extends Controller
 {
@@ -35,7 +36,16 @@ class CommentController extends Controller
 
             // Notify the original commenter
             if ($parentComment->user->preference && $parentComment->user->preference->mentions) {
-                $parentComment->user->notify(new CommentAnsweredNotification($receta));
+                try {
+                    $parentComment->user->notify(new CommentAnsweredNotification($receta));
+                } catch (\Throwable $e) {
+                    Log::warning('comments.notify_parent_failed', [
+                        'recipe_id' => $receta->id,
+                        'comment_id' => $parentComment->id,
+                        'parent_user_id' => $parentComment->user_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
 
@@ -55,7 +65,16 @@ class CommentController extends Controller
         if ($comment->id) {
             $admin = User::find(2);
             if ($admin) {
-                $admin->notify(new CommentAddedNotification($receta));
+                try {
+                    $admin->notify(new CommentAddedNotification($receta));
+                } catch (\Throwable $e) {
+                    Log::warning('comments.notify_admin_failed', [
+                        'recipe_id' => $receta->id,
+                        'comment_id' => $comment->id,
+                        'admin_user_id' => 2,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
 
@@ -127,4 +146,3 @@ class CommentController extends Controller
         ]);
     }
 }
-

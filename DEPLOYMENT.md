@@ -908,6 +908,8 @@ These are created on the server and should not be copied from the repo as source
 
 This section deploys `pdf-export-service` on the same droplet and connects Laravel to it.
 
+Note: `pdf-export-service` now lives **inside this Laravel backend repo** at `laravel-backend-app/pdf-export-service` (it is no longer a separate repository). If you deploy `laravel-backend-app` into `/var/www/healthymartina/api`, the service path on the droplet is `/var/www/healthymartina/api/pdf-export-service`.
+
 ### 17.1 Install Node.js (LTS)
 
 ```bash
@@ -917,7 +919,7 @@ node -v
 npm -v
 ```
 
-### 17.2 Clone service and install dependencies
+### 17.2 Install service dependencies (in-repo)
 
 ```bash
 cd /var/www/healthymartina
@@ -1089,4 +1091,74 @@ cd /var/www/healthymartina/api
 php artisan tinker --execute="dump(config('pdf_export.base_url'));"
 tail -n 120 storage/logs/laravel.log
 sudo journalctl -u pdf-export -n 120 --no-pager
+```
+
+---
+
+## 18. Email / Exports (DigitalOcean Setup)
+
+Email delivery is required for calendar/lista/recipe exports and comment notifications.
+
+### 18.1 Recommended: Mailgun SMTP (simple)
+
+In `/var/www/healthymartina/api/.env`:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailgun.org
+# Prefer 2525 on servers where 587 times out / is blocked
+MAIL_PORT=2525
+MAIL_USERNAME=postmaster@mg.yourdomain.com
+MAIL_PASSWORD=your-mailgun-smtp-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+MAIL_FROM_NAME="HealthyMartina"
+```
+
+Apply config:
+
+```bash
+cd /var/www/healthymartina/api
+php artisan config:clear
+php artisan config:cache
+```
+
+### 18.2 Connectivity troubleshooting (when you see timeouts)
+
+If you see errors like `Unable to connect to smtp.mailgun.org:587 (Connection timed out)`:
+
+```bash
+# Verify DNS + outbound connectivity
+getent hosts smtp.mailgun.org
+nc -vz smtp.mailgun.org 2525
+nc -vz smtp.mailgun.org 587
+nc -vz smtp.mailgun.org 465
+
+# Check if a firewall is restricting egress
+sudo ufw status verbose
+```
+
+If 587 is blocked/timeouts, switch to `MAIL_PORT=2525` (or 465 with `MAIL_ENCRYPTION=ssl`).
+
+### 18.3 Optional: Mailgun HTTP API transport (avoids SMTP ports)
+
+This avoids relying on outbound SMTP ports entirely, but requires adding a Composer dependency:
+
+```bash
+cd /var/www/healthymartina/api
+composer require symfony/mailgun-mailer
+php artisan config:clear
+php artisan config:cache
+```
+
+Then in `.env`:
+
+```env
+MAIL_MAILER=mailgun
+MAILGUN_DOMAIN=mg.yourdomain.com
+MAILGUN_SECRET=key-...
+MAILGUN_ENDPOINT=api.mailgun.net
+MAILGUN_SCHEME=https
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+MAIL_FROM_NAME="HealthyMartina"
 ```
