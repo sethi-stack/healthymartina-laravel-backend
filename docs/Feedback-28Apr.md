@@ -51,7 +51,11 @@ Source: client retest / final feedback.
 ## Implementation Update - 2026-05-12
 Status update on items from 2026-05-11:
 
+- `1` **Add-to-calendar adds to Monday too** → **FIXED (UI)**: Add-to-calendar modal no longer preselects Monday by default when opened from recipe library/menu.
 - `5` **Lista export Server Error** → **MIGRATED / FIXED PATH**: lista export now runs via external Node export service flow; removed reliance on missing Laravel Dompdf view.
+- `6` **Export modal loader** → **DONE (UI)**: added loader while recipes are being fetched for export selection.
+- `7` **Leftovers shaded in export** → **DONE (PDF)**: leftovers now render greyed in weekly plan export.
+- `3` **Raciones on export calendar PDF** → **DONE (PDF)**: ración count now renders in weekly plan export as a prefix (only when `> 1`).
 - `8` **Kebab menu positioning** → **DONE (UI)**: calendar card kebab now stays pinned to the recipe image area (bottom-right) and keeps its dropdown above stacked cards.
 - `9` **Comments “cancelled” regression** → **MITIGATED**: comment creation no longer fails when mail transport times out; notification failures are logged. Frontend ignores benign request-cancel errors to avoid false alerts.
 - `10` **Ración number prefix** → **DONE (UI)**: ración now displays before the recipe title (only when `> 1`).

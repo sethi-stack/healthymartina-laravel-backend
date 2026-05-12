@@ -20,7 +20,10 @@ if (!fs.existsSync(STORAGE_DIR)) {
 }
 
 const app = express();
-app.use(express.json({ limit: '10mb', verify: rawBodySaver }));
+// Be permissive about Content-Type because upstream proxies or clients can send
+// JSON payloads with `text/plain` or missing content-type; we still need the raw
+// body for signature verification.
+app.use(express.json({ limit: '10mb', verify: rawBodySaver, type: '*/*' }));
 
 const jobs = new Map();
 const queue = [];

@@ -19,6 +19,7 @@ function renderStyles() {
   .meal-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
   .meal-images{width:62px;display:flex;flex-direction:column;gap:2px;flex:0 0 62px}
   .meal-images img{width:62px;height:36px;object-fit:cover;display:block}
+  .meal-images img.item-taken{filter:grayscale(100%);opacity:.55}
   .meal-image-fallback{width:62px;height:36px;background:#fafafa;border:1px solid #eee}
   .meal-copy{min-width:0;flex:1}
   .meal-name{font-size:11px;font-weight:800;color:#36544e;text-transform:uppercase;margin-bottom:2px}

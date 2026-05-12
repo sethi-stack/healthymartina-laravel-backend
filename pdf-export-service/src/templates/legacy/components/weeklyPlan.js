@@ -16,13 +16,17 @@ function renderWeeklyPlan(model) {
 
         const images = items
           .filter((item) => !!item.image)
-          .map((item) => `<img src="${esc(item.image)}" alt="${esc(item.title)}" />`)
+          .map((item) => {
+            const cls = item.leftover ? 'item-taken' : '';
+            return `<img class="${cls}" src="${esc(item.image)}" alt="${esc(item.title)}" />`;
+          })
           .join('');
 
         const description = items
           .map((item) => {
-            const ratio = item.racion ? ` · x${esc(item.racion)}` : '';
-            return `${esc(item.title)}${ratio}`;
+            const qty = item.racion && Number(item.racion) > 1 ? `x${esc(item.racion)} ` : '';
+            const cls = item.leftover ? 'item-taken' : '';
+            return `<span class="${cls}">${qty}${esc(item.title)}</span>`;
           })
           .join(' , ');
 
