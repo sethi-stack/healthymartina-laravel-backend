@@ -53,6 +53,7 @@ Status update on items from 2026-05-11:
 
 - `1` **Add-to-calendar adds to Monday too** → **FIXED (UI)**: Add-to-calendar modal no longer preselects Monday by default when opened from recipe library/menu.
 - `2` **Nutrition modal expandable per recipe** → **DONE (UI+API)**: nutrition details modal rows expand to show per-recipe contributions that add up to the day totals.
+- `4` **Export PDF footer + recipe background** → **DONE (PDF)**: external export templates now render a legacy-style footer (logo + right brand block) on calendar/lista/nutrition/recipe pages, and recipe pages include the legacy background overlay treatment on the hero image.
 - `5` **Lista export Server Error** → **MIGRATED / FIXED PATH**: lista export now runs via external Node export service flow; removed reliance on missing Laravel Dompdf view.
 - `6` **Export modal loader** → **DONE (UI)**: added loader while recipes are being fetched for export selection.
 - `7` **Leftovers shaded in export** → **DONE (PDF)**: leftovers now render greyed in weekly plan export.
@@ -61,6 +62,13 @@ Status update on items from 2026-05-11:
 - `9` **Comments “cancelled” regression** → **MITIGATED**: comment creation no longer fails when mail transport times out; notification failures are logged. Frontend ignores benign request-cancel errors to avoid false alerts.
 - `10` **Ración number prefix** → **DONE (UI)**: ración now displays before the recipe title (only when `> 1`).
 - Email exports setup (`11`) → **DOCS ADDED**: deployment guide updated with DigitalOcean + Mailgun SMTP/API options; recommended `MAIL_PORT=2525` when 587 times out.
+
+## Implementation Update - 2026-05-13
+Final status checkpoint:
+
+- `4` **Export PDF footer + logo** → **DONE (PDF)**: footer layout matches legacy; logo source reverted to **professional user's uploaded business logo** (as requested).
+- All items from **2026-05-11 final feedback (1–11)** are now **DONE / mitigated / documented**.
+- Backlog below updated to reflect **no pending client blockers**.
 
 ## Client Retest Snapshot (After First Test - Verbatim)
 HEALTHY MARTINA
@@ -181,7 +189,7 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
    - Item returns to original position after drop.
    - Current accepted behavior: drag preview shows title-only ghost.
 
-5. **Grocery list core actions unavailable** - `REOPENED` (2026-05-04)
+5. **Grocery list core actions unavailable** - `DONE` (2026-05-13)
    - Cannot add ingredients.
    - Cannot validate existing list items.
    - Cannot export/send grocery list by email.
@@ -209,11 +217,11 @@ Track initial QA feedback, prioritize by criticality, and execute fixes one at a
 6. **Calendar recipe menu limitation** - `DONE` (2026-04-30)
    - From 3-dot menu, cannot mark recipe as leftovers.
 
-7. **Add-to-calendar target calendar selection missing** - `NEW` (2026-05-04)
-   - From recipe library/detail add flow, user cannot choose target calendar.
+7. **Add-to-calendar target calendar selection missing** - `DONE` (2026-05-13)
+   - From recipe library/detail add flow, user can choose target calendar (parity restored).
 
-8. **Leftover/reheated visual overlay missing** - `NEW` (2026-05-04)
-   - Lighter/transparent leftover visual state not rendered in card image.
+8. **Leftover/reheated visual overlay missing** - `DONE` (2026-05-13)
+   - Leftover visual state rendering restored (UI + export parity).
 
 ### P2 - Enhancement / Performance / Partial readiness
 1. **Sub-recipes not enabled yet** - `DONE` (2026-05-05)

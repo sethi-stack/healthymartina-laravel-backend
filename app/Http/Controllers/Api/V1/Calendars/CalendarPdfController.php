@@ -480,6 +480,8 @@ class CalendarPdfController extends Controller
                     'id' => (int) $recipe->id,
                     'titulo' => (string) ($recipe->titulo ?? ''),
                     'imagen_principal' => (string) ($recipe->imagen_principal ?? ''),
+                    'porciones' => (int) ($recipe->porciones ?? ($recipe->getPorciones()['cantidad'] ?? 1)),
+                    'tiempo_elaboracion' => (int) ($recipe->tiempo_elaboracion ?? ($recipe->tiempo ?? 0)),
                     'instrucciones' => array_values($recipe->getInstrucciones() ?? []),
                     'tips' => (string) ($recipe->tips ?? ''),
                 ],
@@ -556,6 +558,11 @@ class CalendarPdfController extends Controller
             'recipePages' => $recipePages,
             'nutritionByDay' => $nutritionByDay,
             'listaData' => $listaPayload,
+            'brandName' => (string) (Auth::user()->bname ?: 'Healthy Martina'),
+            'brandEmail' => (string) (Auth::user()->bemail ?: Auth::user()->email),
+            // Footer/logo should use the professional user's uploaded business logo when available.
+            'brandLogo' => (string) (Auth::user()->bimage ?: ''),
+            'brandColor' => (string) (Auth::user()->color ?: '#36544e'),
             'calendar_snapshot' => [
                 'id' => (int) $calendar->id,
                 'title' => (string) ($calendar->title ?? 'calendario'),

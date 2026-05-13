@@ -1,4 +1,5 @@
 const { esc, dayDefaultLabels, mealDefaultLabels } = require('./utils');
+const { renderFooter } = require('./footer');
 
 function renderWeeklyPlan(model) {
   if (!model.weeklyPlan?.days?.length) return '';
@@ -50,6 +51,7 @@ function renderWeeklyPlan(model) {
   return `<section class="pdf-page section-break">
     <div class="section-title">Calendario Semanal</div>
     <div class="weekly-grid">${dayCards}</div>
+    ${renderFooter(model)}
   </section>`;
 }
 

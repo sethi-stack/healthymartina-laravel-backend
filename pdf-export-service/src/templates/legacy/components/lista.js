@@ -1,4 +1,5 @@
 const { esc } = require('./utils');
+const { renderFooter } = require('./footer');
 
 const CATEGORIES_PER_PAGE = 4;
 
@@ -32,6 +33,7 @@ function renderLista(model) {
     const cols = [pageCategories.slice(0, half), pageCategories.slice(half)];
     return `<section class="pdf-page section-break"><div class="section-title">Lista de Compras</div>
       <table class="lista-grid"><tr><td>${renderCol(cols[0])}</td><td>${renderCol(cols[1])}</td></tr></table>
+      ${renderFooter(model)}
     </section>`;
   }).join('');
 }

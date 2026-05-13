@@ -1,4 +1,5 @@
 const { esc } = require('./utils');
+const { renderFooter } = require('./footer');
 
 const MACRO_IDS = { carbs: 96, protein: 97, fat: 99 };
 const LEFT_ORDER = [
@@ -110,7 +111,7 @@ function renderNutritionSummary(model) {
   if (!days.length) return '';
 
   const cards = days.map(dayCard).join('');
-  return `<section class="pdf-page section-break nutrition-reference-page"><div class="nutrition-day-grid">${cards}</div></section>`;
+  return `<section class="pdf-page section-break nutrition-reference-page"><div class="nutrition-day-grid">${cards}</div>${renderFooter(model)}</section>`;
 }
 
 module.exports = { renderNutritionSummary };

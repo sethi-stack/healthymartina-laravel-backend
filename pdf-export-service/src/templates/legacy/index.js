@@ -58,7 +58,7 @@ function renderLegacyBoldDocument(job) {
     }
   };
 
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${model.cover.title}</title>${renderStyles()}</head><body>
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"/><title>${model.cover.title}</title>${renderStyles(model)}</head><body>
     ${showCover ? renderCover(model) : ''}
     ${showCalendar ? (() => {
       notifyStage('calendar');

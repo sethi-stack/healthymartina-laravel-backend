@@ -1,7 +1,66 @@
 const { esc } = require('./utils');
+const { renderFooter } = require('./footer');
 
 function nl2br(value) {
   return esc(value || '').replace(/\n/g, '<br/>');
+}
+
+function gcd(a, b) {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+function toFraction(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  const whole = Math.floor(abs + 1e-9);
+  const frac = abs - whole;
+  if (frac < 1e-6) return `${sign}${whole}`;
+
+  const denominators = [2, 3, 4, 8, 16];
+  let best = null;
+  for (const d of denominators) {
+    const num = Math.round(frac * d);
+    const approx = num / d;
+    const err = Math.abs(frac - approx);
+    if (!best || err < best.err) {
+      best = { num, den: d, err };
+    }
+  }
+
+  if (!best || best.num === 0) return `${sign}${whole}`;
+  if (best.num === best.den) return `${sign}${whole + 1}`;
+
+  const div = gcd(best.num, best.den);
+  const num = best.num / div;
+  const den = best.den / div;
+
+  if (whole > 0) return `${sign}${whole} ${num}/${den}`;
+  return `${sign}${num}/${den}`;
+}
+
+function formatAmountWithFractions(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+
+  const match = text.match(/^(-?\d+(?:[.,]\d+)?)\s*(.*)$/);
+  if (!match) return esc(text);
+
+  const num = match[1].replace(',', '.');
+  const rest = String(match[2] || '').trim();
+  const frac = toFraction(num);
+  if (!frac) return esc(text);
+
+  return esc(`${frac}${rest ? ` ${rest}` : ''}`);
 }
 
 function renderRecipes(model, options = {}) {
@@ -9,15 +68,14 @@ function renderRecipes(model, options = {}) {
     ? options.onRecipeRendered
     : null;
   const recipes = model.recipes || [];
-  const brandName = model.cover?.brandName || 'Healthy Martina';
-  const brandEmail = model.cover?.brandEmail || 'cristina@healthymartina.com';
+  const footer = renderFooter(model);
   if (!recipes.length) return '';
 
   return recipes.map((r, index) => {
     if (onRecipeRendered) {
       onRecipeRendered(index + 1, recipes.length, r);
     }
-    const ingredients = (r.ingredients || []).map((i) => `<li><span>${esc(i.name)}</span><span class="right">${esc(i.amount || '')}</span></li>`).join('');
+    const ingredients = (r.ingredients || []).map((i) => `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(i.name)}</span></li>`).join('');
     const instructions = (r.instructions || []).map((s) => `<li>${esc(s)}</li>`).join('');
     const nutrition = (r.nutrition || []).map((n) => `<tr><td>${esc(n.name)}</td><td class="right">${esc(n.amount || '')}</td></tr>`).join('');
     const tipsBlocks = (r.tipsBlocks || []).length
@@ -27,8 +85,15 @@ function renderRecipes(model, options = {}) {
         </div>`).join('')
       : (r.tips ? `<p class="tip-desc">${nl2br(r.tips)}</p>` : '');
 
+    const metaPorciones = r.porciones != null ? `${esc(r.porciones)} porciones` : '';
+    const metaMinutos = r.minutos != null && r.minutos > 0 ? `${esc(r.minutos)} minutos` : '';
+    const metaLine = [metaPorciones, metaMinutos].filter(Boolean).join('  ');
+
     return `<section class="pdf-page section-break recipe-page-primary">
-      <div class="doc-header"><div class="brand-note">Healthy Martina</div><h1>${esc(r.title)}</h1></div>
+      <div class="doc-header doc-header--recipe">
+        <h1>${esc(r.title)}</h1>
+        ${metaLine ? `<div class="recipe-subtitle"><strong>${metaPorciones}</strong>${metaMinutos ? `&nbsp;&nbsp;${metaMinutos}` : ''}</div>` : ''}
+      </div>
       <div class="recipe-top-image"><img src="${esc(r.image || '')}" alt="${esc(r.title)}" /></div>
       <div class="recipe-content-grid recipe-content-grid-top">
         <article class="recipe-grid-card">
@@ -40,10 +105,7 @@ function renderRecipes(model, options = {}) {
           <ol class="instruction-list">${instructions}</ol>
         </article>
       </div>
-      <div class="recipe-footer">
-        <span class="recipe-footer-brand">${esc(brandName)}</span>
-        <span class="recipe-footer-email">${esc(brandEmail)}</span>
-      </div>
+      ${footer}
     </section>
 
     <section class="pdf-page section-break recipe-page-secondary">
@@ -58,10 +120,7 @@ function renderRecipes(model, options = {}) {
           ${tipsBlocks}
         </article>
       </div>
-      <div class="recipe-footer">
-        <span class="recipe-footer-brand">${esc(brandName)}</span>
-        <span class="recipe-footer-email">${esc(brandEmail)}</span>
-      </div>
+      ${footer}
     </section>`;
   }).join('');
 }

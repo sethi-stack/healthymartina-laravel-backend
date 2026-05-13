@@ -135,6 +135,8 @@ function buildLegacyBoldModel(job) {
   const recipes = recipePages.map((p) => ({
     title: p.recipe?.titulo || 'Receta',
     image: p.recipe?.imagen_principal || '',
+    porciones: p.recipe?.porciones != null ? Number(p.recipe.porciones) : null,
+    minutos: p.recipe?.tiempo_elaboracion != null ? Number(p.recipe.tiempo_elaboracion) : null,
     ingredients: (p.ingredients || []).map((i) => ({ name: i.ingrediente || i.nombre || 'Ingrediente', amount: `${i.cantidad || ''} ${i.medida || i.unidad || ''}`.trim() })),
     instructions: p.recipe?.instrucciones || [],
     nutrition: (p.nutrition || []).map((n) => ({ name: n.nombre || 'Nutriente', amount: `${n.cantidad || ''} ${n.unidad_medida || ''}`.trim() })),
@@ -161,6 +163,8 @@ function buildLegacyBoldModel(job) {
       image: payload.heroRecipe?.imagen_principal || payload.placeholderImage || '',
       brandName: payload.brandName || 'Healthy Martina',
       brandEmail: payload.brandEmail || 'cristina@healthymartina.com',
+      brandLogo: payload.brandLogo || '',
+      brandColor: payload.brandColor || '#36544e',
     },
     weeklyPlan: { days },
     nutritionSummary: { days: nutritionDays },
