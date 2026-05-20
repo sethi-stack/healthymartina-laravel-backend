@@ -45,24 +45,36 @@ class CalendarPdfController extends Controller
 
             $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
 
-            $payload = $this->buildExportPayload(
-                $calendar,
-                $validated['export_param'],
-                $this->normalizeTemplate($validated['template'] ?? 'classic'),
-                $validated['hero_recipe_id'] ?? null,
-                $validated['selected_recipes'] ?? []
-            );
+            // Prefer external Node export service when enabled (same rendering as async/email),
+            // with fallback to legacy Dompdf renderer if unavailable.
+            $pdfBinary = null;
+            try {
+                if ((bool) config('pdf_export.enabled')) {
+                    $externalPdfExportService = app(ExternalPdfExportService::class);
+                    $pdfBinary = $this->renderExternalPdfBinary($calendar, $validated, $externalPdfExportService);
+                }
+            } catch (\Throwable $e) {
+                $pdfBinary = null;
+            }
 
-            $pdfBinary = $this->renderExportPdf($payload);
+            if (!is_string($pdfBinary) || $pdfBinary === '') {
+                $payload = $this->buildExportPayload(
+                    $calendar,
+                    $validated['export_param'],
+                    $this->normalizeTemplate($validated['template'] ?? 'classic'),
+                    $validated['hero_recipe_id'] ?? null,
+                    $validated['selected_recipes'] ?? []
+                );
+
+                $pdfBinary = $this->renderExportPdf($payload);
+            }
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
             Log::info('calendar_export.download.success', [
                 'user_id' => Auth::id(),
                 'calendar_id' => $calendar->id,
-                'template' => $payload['template'] ?? null,
+                'template' => $validated['template'] ?? null,
                 'export_params' => $validated['export_param'] ?? [],
                 'selected_recipe_count' => count($validated['selected_recipes'] ?? []),
-                'included_recipe_pages' => count($payload['recipePages'] ?? []),
-                'has_hero' => !empty($payload['heroRecipe']),
                 'output_bytes' => strlen($pdfBinary),
                 'duration_ms' => $durationMs,
             ]);
