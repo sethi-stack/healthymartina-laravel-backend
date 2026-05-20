@@ -27,7 +27,7 @@ function renderStyles(model = {}) {
   @page { size: A4 portrait; margin: 0; }
   *{box-sizing:border-box;font-family:DejaVu Sans,Helvetica,Arial,sans-serif}
   html,body{margin:0;padding:0;background:#fff;color:#111}
-  .pdf-page{position:relative;width:210mm;min-height:297mm;padding:12mm;page-break-after:always;break-after:page;background:#fff;overflow:hidden}
+  .pdf-page{position:relative;width:210mm;min-height:297mm;padding:12mm 12mm 20mm;page-break-after:always;break-after:page;background:#fff;overflow:hidden}
   .pdf-page:last-child{page-break-after:auto;break-after:auto}
   .section-break{break-before:page;page-break-before:always}
   .section-break:first-child{break-before:auto;page-break-before:auto}
@@ -70,9 +70,10 @@ function renderStyles(model = {}) {
   .item-amount{display:inline-block;color:#555;font-size:8px;font-weight:700;min-width:46px;white-space:nowrap}
   .item-name{display:inline-block;flex:1 1 auto;text-align:left}
   .page-cover{padding:0;background:#e5e5e5}.cover-photo{height:74vh;padding:34px 26px 0}.cover-photo img{width:100%;height:100%;object-fit:cover;display:block}
-  .cover-footer{height:26vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:36px}
-  .cover-title{font-size:38px;line-height:1.05;letter-spacing:.04em;margin:0 0 12px;text-transform:uppercase;font-weight:800;color:#37544e}
-  .cover-rule{width:360px;height:2px;background:#444;margin-bottom:12px}.cover-brand{font-size:31px;line-height:1.1;font-weight:700;color:#37544e;margin-bottom:6px}
+  .cover-footer{height:26vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:28px}
+  .cover-logo{height:18mm;max-width:70mm;object-fit:contain;display:block;margin-bottom:10px}
+  .cover-title{font-size:38px;line-height:1.05;letter-spacing:.04em;margin:0 0 12px;text-transform:uppercase;font-weight:800;color:var(--hm-brand-color)}
+  .cover-rule{width:360px;height:2px;background:#444;margin-bottom:12px}.cover-brand{font-size:31px;line-height:1.1;font-weight:700;color:var(--hm-brand-color);margin-bottom:6px}
   .cover-email{font-size:31px;line-height:1.1;font-weight:800;color:#101010}.cover-mark{margin-top:14px;font-size:34px;line-height:1;color:#d8b242}
   .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 12px;position:relative}
   /* Background overlay treatment (legacy-style) — full-page band behind the image page only. */

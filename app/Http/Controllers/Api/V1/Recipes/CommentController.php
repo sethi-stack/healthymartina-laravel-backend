@@ -130,7 +130,7 @@ class CommentController extends Controller
             ->map(function ($comment) {
                 return [
                     'id' => $comment->id,
-                    'author' => $comment->user->name,
+                    'author' => $comment->user?->name,
                     'author_id' => $comment->user_id,
                     'comment' => $comment->comment,
                     'time' => $comment->elapsed_time,
@@ -138,6 +138,12 @@ class CommentController extends Controller
                     'is_a_response' => $comment->is_a_response,
                     'answered' => $comment->answered,
                     'created_at' => $comment->created_at,
+                    'user' => $comment->user ? [
+                        'id' => $comment->user->id,
+                        'name' => $comment->user->name,
+                        'username' => $comment->user->username,
+                        'image' => $comment->user->image,
+                    ] : null,
                 ];
             });
 

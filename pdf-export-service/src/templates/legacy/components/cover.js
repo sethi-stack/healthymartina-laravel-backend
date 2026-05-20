@@ -7,6 +7,7 @@ function renderCover(model) {
   return `<section class="pdf-page page-cover section-break">
     <div class="cover-photo"><img src="${esc(c.image)}" alt="${esc(c.title)}" /></div>
     <div class="cover-footer">
+      ${c.brandLogo ? `<img class="cover-logo" src="${esc(c.brandLogo)}" alt="logo" />` : ''}
       <h1 class="cover-title">${esc(c.title)}</h1>
       <div class="cover-rule"></div>
       <div class="cover-brand">${esc(c.brandName)}</div>

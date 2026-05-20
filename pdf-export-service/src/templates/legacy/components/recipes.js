@@ -109,7 +109,7 @@ function renderRecipes(model, options = {}) {
     </section>
 
     <section class="pdf-page section-break recipe-page-secondary">
-      <div class="doc-header"><div class="brand-note">Healthy Martina</div><h1>${esc(r.title)}</h1></div>
+      <div class="doc-header"><div class="brand-note">${esc(model?.cover?.brandName || 'Healthy Martina')}</div><h1>${esc(r.title)}</h1></div>
       <div class="recipe-content-grid recipe-content-grid-bottom">
         <article class="recipe-grid-card">
           <h2 class="section-title">Información nutricional</h2>

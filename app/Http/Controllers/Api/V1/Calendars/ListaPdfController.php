@@ -6,24 +6,179 @@ use App\Http\Controllers\Controller;
 use App\Models\Calendar;
 use App\Models\Categoria;
 use App\Models\ListaIngredientes;
+use App\Services\Calendar\ExternalPdfExportService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class ListaPdfController extends Controller
 {
+    private function buildListaData(Calendar $calendar): array
+    {
+        $takenIngredients = DB::table('lista_ingrediente_taken')
+            ->where('calendario_id', $calendar->id)
+            ->get();
+
+        $takenIds = $takenIngredients->pluck('ingred_id')->toArray();
+
+        $categorias = Categoria::orderBy('sort', 'ASC')->get();
+
+        $manualItems = ListaIngredientes::where('calendario_id', $calendar->id)->get();
+
+        $byCategory = [];
+        foreach ($categorias as $category) {
+            $items = getRelatedIngrediente($calendar->id, $category->id, 'list');
+            if (!empty($items)) {
+                $byCategory[] = [
+                    'id'    => $category->id,
+                    'nombre'=> $category->nombre,
+                    'name'  => $category->nombre,
+                    'items' => collect($items)->map(function ($item) use ($category) {
+                        return [
+                            'ingrediente_id' => $item['ingrediente_id'] ?? null,
+                            'categoria_id'   => $item['categoria_id'] ?? $category->id,
+                            'nombre'         => $item['ingrediente'] ?? ($item['nombre'] ?? ($item['name'] ?? 'Ingrediente')),
+                            'cantidad'       => $item['cantidad'] ?? null,
+                            'unidad'         => $item['medida'] ?? ($item['unidad'] ?? ''),
+                            'taken'          => false,
+                        ];
+                    })->toArray(),
+                ];
+            }
+        }
+
+        if ($manualItems->count()) {
+            $byCategory[] = [
+                'name'  => 'Otros',
+                'items' => $manualItems->map(fn($i) => [
+                    'ingrediente_id' => $i->id,
+                    'nombre'   => $i->nombre,
+                    'cantidad' => $i->cantidad,
+                    'unidad'   => $i->unidad_medida,
+                    'taken'    => false,
+                ])->toArray(),
+            ];
+        }
+
+        $ingredientsCount = collect($byCategory)->sum(function ($category) {
+            return count($category['items'] ?? []);
+        });
+
+        return [
+            'categories' => $byCategory,
+            'taken_ids'  => $takenIds,
+            'ingredients_count' => $ingredientsCount,
+        ];
+    }
+
+    private function buildExternalPayload(Calendar $calendar): array
+    {
+        $user = Auth::user();
+        $listaData = $this->buildListaData($calendar);
+
+        return [
+            'template' => 'bold',
+            'export_param' => [2],
+            'hero_recipe_id' => null,
+            'heroRecipe' => null,
+            'selected_recipes' => [],
+            'recipePages' => [],
+            'nutritionByDay' => [],
+            'listaData' => [
+                'taken_ids' => $listaData['taken_ids'] ?? [],
+                'categories' => array_map(function ($cat) {
+                    return [
+                        'name' => $cat['name'] ?? ($cat['nombre'] ?? 'Categoría'),
+                        'items' => array_map(function ($item) {
+                            return [
+                                'ingrediente_id' => $item['ingrediente_id'] ?? null,
+                                'nombre' => $item['nombre'] ?? ($item['ingrediente'] ?? 'Ingrediente'),
+                                'cantidad' => $item['cantidad'] ?? null,
+                                'unidad' => $item['unidad'] ?? '',
+                            ];
+                        }, $cat['items'] ?? []),
+                    ];
+                }, $listaData['categories'] ?? []),
+            ],
+            'brandName' => (string) ($user->bname ?: 'Healthy Martina'),
+            'brandEmail' => (string) ($user->bemail ?: $user->email),
+            'brandLogo' => (string) ($user->bimage ?: ''),
+            'brandColor' => (string) ($user->color ?: '#36544e'),
+            'calendar_snapshot' => [
+                'id' => (int) $calendar->id,
+                'title' => (string) ($calendar->title ?? 'lista'),
+                'labels' => json_decode($calendar->labels, true) ?? [],
+                'main_schedule' => [],
+                'sides_schedule' => [],
+                'main_servings' => [],
+                'sides_servings' => [],
+                'main_racion' => [],
+                'sides_racion' => [],
+                'main_leftovers' => [],
+                'sides_leftovers' => [],
+                'recipe_ids' => [],
+                'recipes_map' => [],
+            ],
+        ];
+    }
+
+    private function renderExternalPdf(Calendar $calendar, ExternalPdfExportService $externalPdfExportService): string
+    {
+        $jobId = (string) Str::uuid();
+        $payload = $this->buildExternalPayload($calendar);
+        $serviceResponse = $externalPdfExportService->enqueue([
+            'job_id' => $jobId,
+            'user_id' => Auth::id(),
+            'calendar_id' => $calendar->id,
+            'request_payload' => [
+                'calendar' => $calendar->id,
+                'export_param' => [2],
+            ],
+            'payload' => $payload,
+        ]);
+
+        $externalJobId = (string) ($serviceResponse['job_id'] ?? $jobId);
+        $deadline = microtime(true) + 75;
+
+        while (microtime(true) < $deadline) {
+            $status = $externalPdfExportService->status($externalJobId);
+            $state = (string) ($status['status'] ?? '');
+            if ($state === 'completed') {
+                $binary = $externalPdfExportService->downloadBinary($externalJobId);
+                return (string) ($binary['body'] ?? '');
+            }
+            if ($state === 'failed') {
+                $message = (string) ($status['error_message'] ?? $status['message'] ?? 'Export failed');
+                throw new \RuntimeException($message);
+            }
+            usleep(800000); // 0.8s
+        }
+
+        throw new \RuntimeException('Export timed out.');
+    }
+
     /**
      * Generate and download lista PDF.
      */
-    public function download(Request $request, int $calendarId)
+    public function download(Request $request, int $calendarId, ExternalPdfExportService $externalPdfExportService)
     {
         $calendar = Calendar::where('id', $calendarId)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        $user = Auth::user();
+        // Prefer external Node export service for parity with other exports.
+        try {
+            $pdfBinary = $this->renderExternalPdf($calendar, $externalPdfExportService);
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . ($calendar->title ?? 'lista') . '.pdf"',
+            ]);
+        } catch (\Throwable $e) {
+            // Fallback to legacy Dompdf path if external export is unavailable.
+            $user = Auth::user();
 
         // Get ingredients data
         $takenIngredients = DB::table('lista_ingrediente_taken')
@@ -73,13 +228,14 @@ class ListaPdfController extends Controller
             ]);
         }
 
-        return $pdf->download($calendar->title . '.pdf');
+            return $pdf->download($calendar->title . '.pdf');
+        }
     }
 
     /**
      * Email lista PDF.
      */
-    public function email(Request $request, int $calendarId)
+    public function email(Request $request, int $calendarId, ExternalPdfExportService $externalPdfExportService)
     {
         $calendar = Calendar::where('id', $calendarId)
             ->where('user_id', Auth::id())
@@ -89,7 +245,7 @@ class ListaPdfController extends Controller
 
         $validated = $request->validate([
             'recipient_email' => 'nullable|email',
-            'lista_ingredients' => 'required|json',
+            'lista_ingredients' => 'required|json', // kept for backwards compatibility
             'plantillas' => 'nullable|string',
         ]);
 
@@ -104,50 +260,7 @@ class ListaPdfController extends Controller
             ], 422);
         }
 
-        // Get ingredients data
-        $takenIngredients = DB::table('lista_ingrediente_taken')
-            ->where('calendario_id', $calendar->id)
-            ->get();
-
-        $categorias = Categoria::orderBy('sort', 'ASC')->get();
-        $listaIngredientes = ListaIngredientes::where('calendario_id', $calendar->id)->get();
-
-        // Get recipe ingredients from request
-        $recipeIngredients = json_decode($validated['lista_ingredients']);
-
-        // Calculate ingredients count
-        $ingredientsCount = (count((array) $recipeIngredients) + $listaIngredientes->count()) - count($takenIngredients);
-
-        // Generate PDF based on user role
-        if ($user->role_id == 3) {
-            $theme = $user->theme ?? 3;
-
-            $viewMap = [
-                1 => 'pdf.classic.classic-lista',
-                2 => 'pdf.modern.modern-lista',
-                3 => 'pdf.bold.bold-lista',
-            ];
-
-            $view = $viewMap[$theme] ?? 'pdf.bold.bold-lista';
-
-            $pdf = PDF::loadView($view, [
-                'ingredients_count' => $ingredientsCount,
-                'recipe_ingredients' => $recipeIngredients,
-                'calendario' => $calendar,
-                'categorias' => $categorias,
-                'taken_ingredientes' => $takenIngredients,
-                'lista_ingredientes' => $listaIngredientes,
-            ]);
-        } else {
-            $pdf = PDF::loadView('pdf.lista-pdf', [
-                'ingredients_count' => $ingredientsCount,
-                'recipe_ingredients' => $recipeIngredients,
-                'calendario' => $calendar,
-                'categorias' => $categorias,
-                'taken_ingredientes' => $takenIngredients,
-                'lista_ingredientes' => $listaIngredientes,
-            ]);
-        }
+        $pdfBinary = $this->renderExternalPdf($calendar, $externalPdfExportService);
 
         // Prepare email data
         $emailData = [
@@ -162,10 +275,10 @@ class ListaPdfController extends Controller
 
         // Send email to recipient
         try {
-            Mail::send('email.send-lista-mail', $emailData, function ($message) use ($emailData, $pdf) {
+            Mail::send('email.send-lista-mail', $emailData, function ($message) use ($emailData, $pdfBinary) {
                 $message->to($emailData['email'], $emailData['email'])
                     ->subject($emailData['title'])
-                    ->attachData($pdf->output(), $emailData['filename'] . '.pdf');
+                    ->attachData($pdfBinary, $emailData['filename'] . '.pdf');
             });
 
             // Send delivery confirmation to user's business email
@@ -176,10 +289,10 @@ class ListaPdfController extends Controller
                     'to' => $emailData['email'],
                     'title' => $emailData['title'],
                     'current_time' => todaySpanishDay(),
-                ], function ($message) use ($user, $emailData, $pdf) {
+                ], function ($message) use ($user, $emailData, $pdfBinary) {
                     $message->to($user->bemail, $user->bemail)
                         ->subject('Tu lista de compras fue entregada')
-                        ->attachData($pdf->output(), $emailData['filename'] . '.pdf');
+                        ->attachData($pdfBinary, $emailData['filename'] . '.pdf');
                 });
             }
 
@@ -249,5 +362,4 @@ class ListaPdfController extends Controller
         }
     }
 }
-
 

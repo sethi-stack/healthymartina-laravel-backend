@@ -70,6 +70,24 @@ Final status checkpoint:
 - All items from **2026-05-11 final feedback (1–11)** are now **DONE / mitigated / documented**.
 - Backlog below updated to reflect **no pending client blockers**.
 
+## Latest QA Update - 2026-05-20
+Source: client final retest / polish pass.
+
+1. Add-to-calendar: Monday checkbox is checked by default when adding a recipe (from calendar or from recipes).
+2. Comments do not show `@who` posted the comment.
+3. PDF export: logo + color missing on cover design and recipe details.
+4. PDF export: nutrition page footer/background overflows/cuts into next page.
+5. Grocery list email still failing on production: `Mailer [mailgun] is not defined.`
+
+## Implementation Update - 2026-05-20
+Status update on items from 2026-05-20:
+
+- `1` **Monday checked by default** → **FIXED (UI)**: disabled days no longer appear pre-checked; only explicitly selected days are checked.
+- `2` **Comments missing @who** → **FIXED (API)**: comments endpoint now returns `user` (name/username/image) so UI can render `@username`.
+- `3` **PDF cover/recipe branding missing** → **FIXED (PDF)**: cover now renders uploaded business logo and uses brand color; recipe detail header uses brand name.
+- `4` **Nutrition footer overflow** → **FIXED (PDF)**: added bottom padding to pages to reserve space for the footer.
+- `5` **Mailer [mailgun] not defined** → **FIXED (CONFIG)**: added `mailgun` mailer config to `config/mail.php` (ensure `MAIL_MAILER=mailgun` + `MAILGUN_*` envs).
+
 ## Client Retest Snapshot (After First Test - Verbatim)
 HEALTHY MARTINA
 TESTING software upgrade
