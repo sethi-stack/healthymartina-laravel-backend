@@ -97,7 +97,40 @@ class CalendarPdfController extends Controller
         }
     }
 
-    public function email(Request $request)
+    private function renderExternalPdfBinary(Calendar $calendar, array $validated, ExternalPdfExportService $externalPdfExportService): string
+    {
+        $payload = $this->buildExternalServicePayload($calendar, $validated);
+        $jobId = (string) Str::uuid();
+
+        $serviceResponse = $externalPdfExportService->enqueue([
+            'job_id' => $jobId,
+            'user_id' => Auth::id(),
+            'calendar_id' => $calendar->id,
+            'request_payload' => $validated,
+            'payload' => $payload,
+        ]);
+
+        $externalJobId = (string) ($serviceResponse['job_id'] ?? $jobId);
+        $deadline = microtime(true) + 120;
+
+        while (microtime(true) < $deadline) {
+            $status = $externalPdfExportService->status($externalJobId);
+            $state = (string) ($status['status'] ?? '');
+            if ($state === 'completed') {
+                $binary = $externalPdfExportService->downloadBinary($externalJobId);
+                return (string) ($binary['body'] ?? '');
+            }
+            if ($state === 'failed') {
+                $message = (string) ($status['error_message'] ?? $status['message'] ?? 'Export failed');
+                throw new \RuntimeException($message);
+            }
+            usleep(800000); // 0.8s
+        }
+
+        throw new \RuntimeException('Export timed out.');
+    }
+
+    public function email(Request $request, ExternalPdfExportService $externalPdfExportService)
     {
         $this->prepareExportRuntimeLimits();
         $startedAt = microtime(true);
@@ -110,6 +143,7 @@ class CalendarPdfController extends Controller
             'selected_recipes' => 'nullable|array',
             'selected_recipes.*' => 'integer',
             'recipient_email_address' => 'nullable|email',
+            'plantillas' => 'nullable|string',
         ]);
 
         $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
@@ -122,25 +156,39 @@ class CalendarPdfController extends Controller
             ], 422);
         }
 
-        $payload = $this->buildExportPayload(
-            $calendar,
-            $validated['export_param'],
-            $this->normalizeTemplate($validated['template'] ?? 'classic'),
-            $validated['hero_recipe_id'] ?? null,
-            $validated['selected_recipes'] ?? []
-        );
-
-        $pdfBinary = $this->renderExportPdf($payload);
+        // Use external Node export service for parity with download/export job.
+        // Fallback to legacy Dompdf+merge if service is disabled/unavailable.
+        try {
+            if ((bool) config('pdf_export.enabled')) {
+                $pdfBinary = $this->renderExternalPdfBinary($calendar, $validated, $externalPdfExportService);
+            } else {
+                $payload = $this->buildExportPayload(
+                    $calendar,
+                    $validated['export_param'],
+                    $this->normalizeTemplate($validated['template'] ?? 'classic'),
+                    $validated['hero_recipe_id'] ?? null,
+                    $validated['selected_recipes'] ?? []
+                );
+                $pdfBinary = $this->renderExportPdf($payload);
+            }
+        } catch (\Throwable $e) {
+            $payload = $this->buildExportPayload(
+                $calendar,
+                $validated['export_param'],
+                $this->normalizeTemplate($validated['template'] ?? 'classic'),
+                $validated['hero_recipe_id'] ?? null,
+                $validated['selected_recipes'] ?? []
+            );
+            $pdfBinary = $this->renderExportPdf($payload);
+        }
         $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
         Log::info('calendar_export.email.rendered', [
             'user_id' => Auth::id(),
             'calendar_id' => $calendar->id,
             'recipient' => $recipient,
-            'template' => $payload['template'] ?? null,
+            'template' => $validated['template'] ?? null,
             'export_params' => $validated['export_param'] ?? [],
             'selected_recipe_count' => count($validated['selected_recipes'] ?? []),
-            'included_recipe_pages' => count($payload['recipePages'] ?? []),
-            'has_hero' => !empty($payload['heroRecipe']),
             'output_bytes' => strlen($pdfBinary),
             'duration_ms' => $durationMs,
         ]);
@@ -152,6 +200,9 @@ class CalendarPdfController extends Controller
             'title' => $title,
             'filename' => $calendar->title ?? 'calendario',
             'current_time' => todaySpanishDay(),
+            'plantillas' => !empty($validated['plantillas'])
+                ? utf8_decode(urldecode($validated['plantillas']))
+                : '',
         ];
 
         Mail::send('email.send-calendario-mail', $mailData, function ($message) use ($mailData, $pdfBinary, $fileName) {
