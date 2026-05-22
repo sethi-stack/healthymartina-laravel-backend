@@ -583,7 +583,6 @@ function getDayNutritionForModal($daykey, $calendar, $visible_info, $filter_info
 
 function getDayNutritionData($daykey, $calendar, $visible_info, $filter_info)
 {
-    $nutrientes_data = [];
     $cMains = json_decode($calendar->main_schedule, true) ?? [];
     $cSides = json_decode($calendar->sides_schedule, true) ?? [];
     $cMracion = json_decode($calendar->main_racion, true) ?? [];
@@ -597,123 +596,86 @@ function getDayNutritionData($daykey, $calendar, $visible_info, $filter_info)
     $mainRacionDayData = $cMracion[$daykey] ?? [];
     $sidesRacionDayData = $cSracion[$daykey] ?? [];
 
-    $allRecipeIds = array_filter((([...array_values($mainDayData), ...array_values($sidesDayData)])));
+    $allRecipeIds = array_values(array_filter((([...array_values($mainDayData), ...array_values($sidesDayData)]))));
     $countsPerRecipe = array_count_values($allRecipeIds);
-    // $allRacions = array_filter((([...array_values($mainRacionDayData), ...array_values($sidesRacionDayData)])));
-    $nutRecipesMapping = [];
     foreach ($mainDayData as $meal => $id) {
-        $recipeRacionMapping[$id] = $mainRacionDayData[$meal] ?? null;
+        if ($id) {
+            $recipeRacionMapping[$id] = $mainRacionDayData[$meal] ?? 1;
+        }
     }
     foreach ($sidesDayData as $meal => $id) {
-        $recipeRacionMapping[$id] = $sidesRacionDayData[$meal] ?? null;
+        if ($id) {
+            $recipeRacionMapping[$id] = $sidesRacionDayData[$meal] ?? 1;
+        }
     }
-    $cRecps = Receta::whereIn('id', $allRecipeIds)->get();
-    $rIdRecMapping = [];
-    foreach($cRecps as $r){
-        $rIdRecMapping[$r['id']] = $r;
+    if (count($countsPerRecipe) === 0) {
+        // No recipes — return defaults.
+        return array_values($constants_nutritients);
     }
-    if (count($cRecps) == 0) {
-        $nutrientes_data = array_values($constants_nutritients);
-    } else {
-        foreach($countsPerRecipe as $rId=>$count){
-            for($i=0;$i<$count;$i++){
-                $recipe =  $rIdRecMapping[$rId];
-                $nutrientes = $recipe->getInformacionNutrimental();
-                usort($nutrientes['info'], function ($item1, $item2) {
-                    if (!$item1['orden']) {
-                        return 1;
-                    }
-                    if (!$item2['orden']) {
-                        return -1;
-                    }
-                    return $item1['orden'] <=> $item2['orden'];
-                });
-                foreach ($nutrientes['info'] as $nut) {
-                    if (in_array($nut['id'], $visible_info)) {
-                        $needed_color = array_filter(
-                            $constants_nutritients,
-                            function ($e) use ($nut) {
-                                if ($e['id'] == $nut['id']) {
-                                    return $e['color'];
-                                }
-                            }
-                        );
-                        $nut['mcolor'] = $nut['color'];
-                        if ($needed_color) {
-                            $nut['mcolor'] = array_values($needed_color)[0]['color'];
-                        }
-                        $nut['porcion'] = $recipeRacionMapping[$recipe['id']];
-                        //$nutRecipesMapping[$nut['id']][] = ['id' => $recipe->id, 'titulo' => $recipe->titulo, 'recipeCantidad' => $recipe['cantidad'] * $recipeRacionMapping[$recipe['id']]];
 
-                        // $nut['recipes'][] = ['id'=>$recipe->id,'titulo'=>$recipe->titulo,'recipeCantidad'=> $recipe['cantidad'] * $recipeRacionMapping[$recipe['id']]];
-                        $nutrientes_data[] = $nut;
-                    }
+    $recipes = Receta::whereIn('id', array_keys($countsPerRecipe))->get()->keyBy('id');
+
+    $totals = []; // nutrientId => ['id','nombre','unidad_medida','cantidad','percentage','mcolor']
+    $pieTotal = 0.0;
+
+    foreach ($countsPerRecipe as $recipeId => $count) {
+        $recipe = $recipes[$recipeId] ?? null;
+        if (!$recipe) continue;
+
+        $racion = (float) ($recipeRacionMapping[$recipeId] ?? 1);
+        $multiplier = $racion * (float) max(1, (int) $count);
+
+        // Prefer using precomputed `nutrient_info` (JSON column) to avoid expensive
+        // relationship loading inside `getInformacionNutrimental()`.
+        $info = $recipe->nutrient_info;
+        if (!is_array($info) || empty($info)) {
+            $nutrientes = $recipe->getInformacionNutrimental();
+            $info = $nutrientes['info'] ?? [];
+        }
+
+        foreach ($info as $nut) {
+            if (!isset($nut['id']) || !in_array($nut['id'], $visible_info)) {
+                continue;
+            }
+
+            $nutId = (string) $nut['id'];
+            $amount = ((float) ($nut['cantidad'] ?? 0)) * $multiplier;
+            $unit = (string) ($nut['unidad_medida'] ?? '');
+            $name = (string) ($nut['nombre'] ?? '');
+
+            // Prefer constant color if present for this nutrient.
+            $mcolor = $nut['color'] ?? '';
+            $needed_color = array_filter(
+                $constants_nutritients,
+                function ($e) use ($nutId) {
+                    return (string) ($e['id'] ?? '') === (string) $nutId;
                 }
+            );
+            if ($needed_color) {
+                $mcolor = array_values($needed_color)[0]['color'] ?? $mcolor;
+            }
 
+            if (!isset($totals[$nutId])) {
+                $totals[$nutId] = [$nutId, $name, $unit, 0.0, 0.0, $mcolor];
+            }
+            $totals[$nutId][3] += $amount;
+
+            if (in_array($nutId, ['96', '97', '99'], true)) {
+                $pieTotal += $amount;
             }
         }
-        // foreach ($cRecps as $idx => $recipe) {
-        //     $nutrientes = $recipe->getInformacionNutrimental();
-        //     usort($nutrientes['info'], function ($item1, $item2) {
-        //         if (!$item1['orden']) {
-        //             return 1;
-        //         }
-        //         if (!$item2['orden']) {
-        //             return -1;
-        //         }
-        //         return $item1['orden'] <=> $item2['orden'];
-        //     });
-        //     foreach ($nutrientes['info'] as $nut) {
-        //         if (in_array($nut['id'], $visible_info)) {
-        //             $needed_color = array_filter(
-        //                 $constants_nutritients,
-        //                 function ($e) use ($nut) {
-        //                     if ($e['id'] == $nut['id']) {
-        //                         return $e['color'];
-        //                     }
-        //                 }
-        //             );
-        //             $nut['mcolor'] = $nut['color'];
-        //             if ($needed_color) {
-        //                 $nut['mcolor'] = array_values($needed_color)[0]['color'];
-        //             }
-        //             $nut['porcion'] = $recipeRacionMapping[$recipe['id']];
-        //             $nutRecipesMapping[$nut['id']][] =['id' => $recipe->id, 'titulo' => $recipe->titulo, 'recipeCantidad' => $recipe['cantidad'] * $recipeRacionMapping[$recipe['id']]];
+    }
 
-        //             // $nut['recipes'][] = ['id'=>$recipe->id,'titulo'=>$recipe->titulo,'recipeCantidad'=> $recipe['cantidad'] * $recipeRacionMapping[$recipe['id']]];
-        //             $nutrientes_data[] = $nut;
-        //         }
-        //     }
-        // }
-    }
-    // print_r($nutrientes_data);
-    $return = [];
-    $pie = [];
-    foreach ($nutrientes_data as $nutrient) {
-        if (!array_key_exists($nutrient['id'], $return)) {
-            $return[$nutrient['id']] = ['cantidad' => 0, 'info' => null, 'percentage' => 0];
-        }
-        if(!array_key_exists('porcion',$nutrient)){
-            $nutrient['porcion'] = 0;
-            $nutrient['mcolor'] = $nutrient['color'];
-        }
-        $return[$nutrient['id']]['cantidad'] += ($nutrient['cantidad'] * $nutrient['porcion']);
-        if (in_array($nutrient['id'], ['96', '97', '99'])) {
-            $pie[] = $nutrient['cantidad'] * $nutrient['porcion'];
-        }
-        $return[$nutrient['id']]['info'] = [$nutrient['id'], $nutrient['nombre'], $nutrient['unidad_medida'], $return[$nutrient['id']]['cantidad'], $return[$nutrient['id']]['percentage'], $nutrient['mcolor']];
-    }
-    $returnTransformed = array_map(function ($item) use ($pie) {
-        if (in_array($item['info'][0], ['96', '97', '99'])) {
-            if(array_sum($pie)==0){
-            $item['info'][4] = 0;
-            }else{
-            $item['info'][4] = 100 * ($item['info'][3] / (array_sum($pie)));
+    // Fill percentages for macros.
+    if ($pieTotal > 0) {
+        foreach (['96', '97', '99'] as $macroId) {
+            if (isset($totals[$macroId])) {
+                $totals[$macroId][4] = 100 * ($totals[$macroId][3] / $pieTotal);
             }
         }
-        return $item['info'];
-    }, $return);
-        return $returnTransformed;
+    }
+
+    return array_values($totals);
 }
 
 /**
