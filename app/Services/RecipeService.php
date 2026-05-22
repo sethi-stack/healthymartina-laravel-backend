@@ -29,7 +29,18 @@ class RecipeService
      */
     public function getFilteredRecipes(array $filters = [])
     {
-        $query = Receta::query();
+        $query = Receta::query()->select([
+            'id',
+            'slug',
+            'titulo',
+            'tiempo',
+            'tiempo_nota',
+            'imagen_principal',
+            'imagen_secundaria',
+            'active',
+            'created_at',
+            'updated_at',
+        ]);
 
         // Apply filters
         if (isset($filters['search'])) {
@@ -52,7 +63,8 @@ class RecipeService
         }
 
         // Eager load relationships
-        $query->with(['tags']);
+        $query->with(['tags'])
+            ->withCount('recetaInstruccionReceta');
 
         // Sort
         $sortBy = $filters['sort_by'] ?? 'created_at';

@@ -16,7 +16,15 @@ class IngredientController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Ingrediente::query();
+        $query = Ingrediente::query()->select([
+            'id',
+            'nombre',
+            'categoria_id',
+            'forma_compra_id',
+            'tipo_medida_id',
+            'created_at',
+            'updated_at',
+        ]);
 
         // Search by name
         if ($request->has('q')) {
@@ -37,8 +45,11 @@ class IngredientController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         // Paginate
-        $perPage = $request->get('per_page', 10);
-        $ingredients = $query->paginate($perPage);
+        $perPage = (int) $request->get('per_page', 10);
+        // Large pages don't need an expensive total-count query.
+        $ingredients = $perPage > 100
+            ? $query->simplePaginate($perPage)
+            : $query->paginate($perPage);
 
         return IngredientResource::collection($ingredients);
     }
@@ -65,4 +76,3 @@ class IngredientController extends Controller
         return InstruccionResource::collection($instrucciones);
     }
 }
-

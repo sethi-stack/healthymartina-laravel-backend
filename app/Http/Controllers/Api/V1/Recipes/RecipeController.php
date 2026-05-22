@@ -37,8 +37,11 @@ class RecipeController extends Controller
         $query = $this->recipeService->getFilteredRecipes($filters);
 
         // Paginate
-        $perPage = $request->get('per_page', 15);
-        $recipes = $query->paginate($perPage);
+        $perPage = (int) $request->get('per_page', 15);
+        // Large pages don't need an expensive total-count query.
+        $recipes = $perPage > 100
+            ? $query->simplePaginate($perPage)
+            : $query->paginate($perPage);
 
         return RecipeListResource::collection($recipes);
     }

@@ -16,8 +16,6 @@ class RecipeListResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $porciones = $this->getPorciones();
-
         return [
             'id' => $this->id,
             'slug' => $this->slug,
@@ -30,10 +28,13 @@ class RecipeListResource extends JsonResource
             'imagen_secundaria' => $this->imagen_secundaria,
             'imagen_pequena' => $this->imagen_principal,
             'imagen' => $this->imagen_principal,
-            'porcion_nombre' => $porciones['nombre'] ?? 'Porción',
-            'porcion_nombre_plural' => $porciones['nombre_plural'] ?? 'Porciones',
+            // Avoid calling getPorciones() in list views (it triggers N+1 queries).
+            // List only needs display labels.
+            'porcion_nombre' => 'Porción',
+            'porcion_nombre_plural' => 'Porciones',
             'tags' => TagResource::collection($this->whenLoaded('tags')),
-            'ingredientes_count' => $this->getCantidadIngredientes(),
+            // Prefer withCount('recetaInstruccionReceta') from the query.
+            'ingredientes_count' => $this->receta_instruccion_receta_count ?? 0,
             'like_reactions' => $this->like_reactions ?? 0,
             'dislike_reactions' => $this->dislike_reactions ?? 0,
             'active' => (bool) $this->active,

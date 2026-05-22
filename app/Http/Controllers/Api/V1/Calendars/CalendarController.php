@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Calendars;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Calendar\CalendarResource;
+use App\Http\Resources\Calendar\CalendarListResource;
 use App\Models\Calendar;
 use App\Models\Plan;
 use Illuminate\Http\Request;
@@ -19,10 +20,11 @@ class CalendarController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $calendars = Auth::user()->calendars()
+            ->select(['id', 'user_id', 'title', 'created_at', 'updated_at'])
             ->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+            ->simplePaginate((int) $request->get('per_page', 15));
 
-        return CalendarResource::collection($calendars);
+        return CalendarListResource::collection($calendars);
     }
 
     /**

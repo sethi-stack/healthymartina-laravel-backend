@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
 
+        // Perf instrumentation (enabled only when APP_DEBUG=true + X-Perf-Debug: 1 header).
+        $middleware->appendToGroup('api', \App\Http\Middleware\PerfDebug::class);
+
         // Register Backpack admin middleware
         $middleware->alias([
             'admin' => \App\Http\Middleware\CheckIfAdmin::class,
