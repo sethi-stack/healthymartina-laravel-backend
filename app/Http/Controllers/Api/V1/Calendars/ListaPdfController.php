@@ -23,7 +23,7 @@ class ListaPdfController extends Controller
             ->where('calendario_id', $calendar->id)
             ->get();
 
-        $takenIds = $takenIngredients->pluck('ingred_id')->toArray();
+        $takenIds = $takenIngredients->pluck('ingrediente_id')->toArray();
 
         $categorias = Categoria::orderBy('sort', 'ASC')->get();
 
