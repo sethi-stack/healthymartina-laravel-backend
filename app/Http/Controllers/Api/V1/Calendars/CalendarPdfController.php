@@ -10,6 +10,7 @@ use App\Models\Categoria;
 use App\Models\ListaIngredientes;
 use App\Models\Receta;
 use App\Services\Calendar\ExternalPdfExportService;
+use App\Services\Mail\ExternalMailService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use iio\libmergepdf\Merger;
 use Illuminate\Http\Request;
@@ -17,7 +18,6 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class CalendarPdfController extends Controller
 {
@@ -142,7 +142,11 @@ class CalendarPdfController extends Controller
         throw new \RuntimeException('Export timed out.');
     }
 
-    public function email(Request $request, ExternalPdfExportService $externalPdfExportService)
+    public function email(
+        Request $request,
+        ExternalPdfExportService $externalPdfExportService,
+        ExternalMailService $externalMailService
+    )
     {
         $this->prepareExportRuntimeLimits();
         $startedAt = microtime(true);
@@ -207,33 +211,24 @@ class CalendarPdfController extends Controller
         $fileName = ($calendar->title ?? 'calendario') . '.pdf';
         $title = '¡Tu plan de alimentación esta listo!';
 
-        $mailData = [
-            'email' => $recipient,
-            'title' => $title,
-            'filename' => $calendar->title ?? 'calendario',
-            'current_time' => todaySpanishDay(),
-            'plantillas' => !empty($validated['plantillas'])
-                ? utf8_decode(urldecode($validated['plantillas']))
-                : '',
-        ];
+        $mailBody = 'Adjuntamos tu plan de alimentación en PDF.';
+        $externalMailService->sendPdf(
+            $recipient,
+            $title,
+            $mailBody,
+            $fileName,
+            $pdfBinary
+        );
 
-        Mail::send('email.send-calendario-mail', $mailData, function ($message) use ($mailData, $pdfBinary, $fileName) {
-            $message->to($mailData['email'], $mailData['email'])
-                ->subject($mailData['title'])
-                ->attachData($pdfBinary, $fileName);
-        });
-
-        Mail::send('email.delivery-email', [
-            'type' => 'Calendario',
-            'meal_type' => 'Plan de alimentación',
-            'to' => $mailData['email'],
-            'title' => $mailData['title'],
-            'current_time' => todaySpanishDay(),
-        ], function ($message) use ($mailData, $pdfBinary, $fileName) {
-            $message->to(Auth::user()->bemail, Auth::user()->bemail)
-                ->subject('Tu plan de alimentación fue entregado')
-                ->attachData($pdfBinary, $fileName);
-        });
+        if (!empty(Auth::user()->bemail)) {
+            $externalMailService->sendDeliveryNotice(
+                (string) Auth::user()->bemail,
+                'Tu plan de alimentación fue entregado',
+                'Se entregó correctamente el PDF del calendario al destinatario.',
+                $fileName,
+                $pdfBinary
+            );
+        }
 
         return response()->json([
             'success' => true,

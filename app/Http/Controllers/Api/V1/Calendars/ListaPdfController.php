@@ -7,6 +7,7 @@ use App\Models\Calendar;
 use App\Models\Categoria;
 use App\Models\ListaIngredientes;
 use App\Services\Calendar\ExternalPdfExportService;
+use App\Services\Mail\ExternalMailService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -235,7 +236,12 @@ class ListaPdfController extends Controller
     /**
      * Email lista PDF.
      */
-    public function email(Request $request, int $calendarId, ExternalPdfExportService $externalPdfExportService)
+    public function email(
+        Request $request,
+        int $calendarId,
+        ExternalPdfExportService $externalPdfExportService,
+        ExternalMailService $externalMailService
+    )
     {
         $calendar = Calendar::where('id', $calendarId)
             ->where('user_id', Auth::id())
@@ -262,38 +268,26 @@ class ListaPdfController extends Controller
 
         $pdfBinary = $this->renderExternalPdf($calendar, $externalPdfExportService);
 
-        // Prepare email data
-        $emailData = [
-            'email' => $recipientEmail,
-            'title' => '¡Tu lista está lista!',
-            'filename' => $calendar->title,
-            'current_time' => todaySpanishDay(),
-            'plantillas' => !empty($validated['plantillas']) 
-                ? utf8_decode(urldecode($validated['plantillas'])) 
-                : '',
-        ];
-
-        // Send email to recipient
+        $title = '¡Tu lista está lista!';
+        $fileName = ($calendar->title ?? 'lista') . '.pdf';
         try {
-            Mail::send('email.send-lista-mail', $emailData, function ($message) use ($emailData, $pdfBinary) {
-                $message->to($emailData['email'], $emailData['email'])
-                    ->subject($emailData['title'])
-                    ->attachData($pdfBinary, $emailData['filename'] . '.pdf');
-            });
+            $externalMailService->sendPdf(
+                $recipientEmail,
+                $title,
+                'Adjuntamos tu lista de compras en PDF.',
+                $fileName,
+                $pdfBinary
+            );
 
             // Send delivery confirmation to user's business email
             if ($user->bemail) {
-                Mail::send('email.delivery-email', [
-                    'type' => 'Lista',
-                    'meal_type' => 'Tu lista',
-                    'to' => $emailData['email'],
-                    'title' => $emailData['title'],
-                    'current_time' => todaySpanishDay(),
-                ], function ($message) use ($user, $emailData, $pdfBinary) {
-                    $message->to($user->bemail, $user->bemail)
-                        ->subject('Tu lista de compras fue entregada')
-                        ->attachData($pdfBinary, $emailData['filename'] . '.pdf');
-                });
+                $externalMailService->sendDeliveryNotice(
+                    (string) $user->bemail,
+                    'Tu lista de compras fue entregada',
+                    'Se entregó correctamente el PDF de la lista de compras al destinatario.',
+                    $fileName,
+                    $pdfBinary
+                );
             }
 
             return response()->json([
@@ -362,4 +356,3 @@ class ListaPdfController extends Controller
         }
     }
 }
-
