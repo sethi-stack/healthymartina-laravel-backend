@@ -124,9 +124,20 @@ function decToFractionNew($float)
 
 function check_leftover($calendario_id, $meal, $day, $schedule)
 {
-    $calendar = Calendar::where('id', $calendario_id)->where('user_id', Auth::user()->id)->first();
-    $main_leftovers = json_decode($calendar->main_leftovers, true);
-    $sides_leftovers = json_decode($calendar->sides_leftovers, true);
+    static $leftoverCache = [];
+    $userId = Auth::user()->id;
+    $cacheKey = $userId . ':' . $calendario_id;
+
+    if (!isset($leftoverCache[$cacheKey])) {
+        $calendar = Calendar::where('id', $calendario_id)->where('user_id', $userId)->first();
+        $leftoverCache[$cacheKey] = [
+            'main' => json_decode($calendar->main_leftovers ?? '[]', true) ?: [],
+            'side' => json_decode($calendar->sides_leftovers ?? '[]', true) ?: [],
+        ];
+    }
+
+    $main_leftovers = $leftoverCache[$cacheKey]['main'];
+    $sides_leftovers = $leftoverCache[$cacheKey]['side'];
     $return = false;
     if ($schedule == 'main') {
         foreach ($main_leftovers as $key => $value) {
@@ -151,9 +162,20 @@ function check_leftover($calendario_id, $meal, $day, $schedule)
 }
 function get_servings($calendario_id, $meal, $day, $schedule)
 {
-    $calendar = Calendar::where('id', $calendario_id)->where('user_id', Auth::user()->id)->first();
-    $main_servings = json_decode($calendar->main_servings, true);
-    $sides_servings = json_decode($calendar->sides_servings, true);
+    static $servingsCache = [];
+    $userId = Auth::user()->id;
+    $cacheKey = $userId . ':' . $calendario_id;
+
+    if (!isset($servingsCache[$cacheKey])) {
+        $calendar = Calendar::where('id', $calendario_id)->where('user_id', $userId)->first();
+        $servingsCache[$cacheKey] = [
+            'main' => json_decode($calendar->main_servings ?? '[]', true) ?: [],
+            'side' => json_decode($calendar->sides_servings ?? '[]', true) ?: [],
+        ];
+    }
+
+    $main_servings = $servingsCache[$cacheKey]['main'];
+    $sides_servings = $servingsCache[$cacheKey]['side'];
     $return = '';
     if ($schedule == 'main') {
         foreach ($main_servings as $key => $value) {
@@ -178,9 +200,45 @@ function get_servings($calendario_id, $meal, $day, $schedule)
 }
 function getRelatedIngrediente($calendario_id, $categoria_id, $use = "list")
 {
-    $calendar = Calendar::where('id', $calendario_id)->where('user_id', Auth::user()->id)->first();
-    $cMains = json_decode($calendar->main_schedule, true);
-    $cSides = json_decode($calendar->sides_schedule, true);
+    static $calendarContextCache = [];
+    static $recipesByCalendarCache = [];
+    $userId = Auth::user()->id;
+    $cacheKey = $userId . ':' . $calendario_id;
+
+    if (!isset($calendarContextCache[$cacheKey])) {
+        $calendar = Calendar::where('id', $calendario_id)->where('user_id', $userId)->first();
+        $calendarContextCache[$cacheKey] = [
+            'main_schedule' => json_decode($calendar->main_schedule ?? '[]', true) ?: [],
+            'sides_schedule' => json_decode($calendar->sides_schedule ?? '[]', true) ?: [],
+        ];
+    }
+
+    $cMains = $calendarContextCache[$cacheKey]['main_schedule'];
+    $cSides = $calendarContextCache[$cacheKey]['sides_schedule'];
+
+    if (!isset($recipesByCalendarCache[$cacheKey])) {
+        $recipeIds = [];
+        foreach ($cMains as $dayMeals) {
+            foreach ((array) $dayMeals as $recipeId) {
+                if (!empty($recipeId)) {
+                    $recipeIds[] = (int) $recipeId;
+                }
+            }
+        }
+        foreach ($cSides as $dayMeals) {
+            foreach ((array) $dayMeals as $recipeId) {
+                if (!empty($recipeId)) {
+                    $recipeIds[] = (int) $recipeId;
+                }
+            }
+        }
+        $recipeIds = array_values(array_unique(array_filter($recipeIds)));
+        $recipesByCalendarCache[$cacheKey] = empty($recipeIds)
+            ? []
+            : Receta::whereIn('id', $recipeIds)->get()->keyBy('id')->all();
+    }
+    $recipesById = $recipesByCalendarCache[$cacheKey];
+
     $cRecpIds = array();
     $mcRecpIgs = array();
     $scRecpIgs = array();
@@ -192,8 +250,10 @@ function getRelatedIngrediente($calendario_id, $categoria_id, $use = "list")
                 $check_leftover = check_leftover($calendario_id, $key1, $key, 'main');
                 if ($check_leftover == true) {
                     $get_servings = get_servings($calendario_id, $key1, $key, 'main');
-
-                    $receta = Receta::where('id', $cRecpId)->firstOrFail();
+                    $receta = $recipesById[(int) $cRecpId] ?? null;
+                    if (!$receta) {
+                        continue;
+                    }
                     $porcion = $receta->getPorciones()['cantidad'];
                     $mcRecpIgs[] = $receta->getCategoriaIngredientes($categoria_id, $key1, $key, 'main', $get_servings, $porcion);
                 }
@@ -207,8 +267,10 @@ function getRelatedIngrediente($calendario_id, $categoria_id, $use = "list")
                 $check_leftover = check_leftover($calendario_id, $key1, $key, 'side');
                 if ($check_leftover == true) {
                     $get_servings = get_servings($calendario_id, $key1, $key, 'side');
-
-                    $receta = Receta::where('id', $scRecpId)->firstOrFail();
+                    $receta = $recipesById[(int) $scRecpId] ?? null;
+                    if (!$receta) {
+                        continue;
+                    }
                     $porcion = $receta->getPorciones()['cantidad'];
                     $scRecpIgs[] = $receta->getCategoriaIngredientes($categoria_id, $key1, $key, 'side', $get_servings, $porcion);
                 }

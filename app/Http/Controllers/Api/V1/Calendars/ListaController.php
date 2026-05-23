@@ -12,10 +12,33 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ListaController extends Controller
 {
+    private function listaCacheKey(int $calendarId, string $suffix = 'all', ?string $calendarUpdatedAt = null): string
+    {
+        return sprintf(
+            'lista:v1:user:%d:calendar:%d:updated:%s:%s',
+            (int) Auth::id(),
+            $calendarId,
+            $calendarUpdatedAt ?: 'na',
+            $suffix
+        );
+    }
+
+    private function forgetListaCache(Calendar $calendar): void
+    {
+        $baseUpdatedAt = optional($calendar->updated_at)->timestamp ?: 'na';
+        Cache::forget($this->listaCacheKey((int) $calendar->id, 'all', (string) $baseUpdatedAt));
+
+        $categoryIds = Categoria::pluck('id');
+        foreach ($categoryIds as $categoryId) {
+            Cache::forget($this->listaCacheKey((int) $calendar->id, 'category:' . (int) $categoryId, (string) $baseUpdatedAt));
+        }
+    }
+
     /**
      * Get all ingredients for a calendar's lista.
      * Returns ingredients grouped by categories with taken status.
@@ -26,38 +49,42 @@ class ListaController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        // Get taken ingredients
-        $takenIngredients = DB::table('lista_ingrediente_taken')
-            ->where('calendario_id', $calendar->id)
-            ->get();
+        $cacheKey = $this->listaCacheKey(
+            (int) $calendar->id,
+            'all',
+            (string) (optional($calendar->updated_at)->timestamp ?: 'na')
+        );
 
-        // Get categories
-        $categorias = Categoria::orderBy('sort', 'ASC')->get();
+        $payload = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($calendar) {
+            $takenIngredients = DB::table('lista_ingrediente_taken')
+                ->where('calendario_id', $calendar->id)
+                ->get();
 
-        // Get custom lista ingredients
-        $listaIngredientes = ListaIngredientes::where('calendario_id', $calendar->id)->get();
+            $categorias = Categoria::orderBy('sort', 'ASC')->get();
+            $listaIngredientes = ListaIngredientes::where('calendario_id', $calendar->id)->get();
 
-        // Get all ingredients grouped by category using helper function
-        $ingredients = [];
-        $totalCount = 0;
-        
-        foreach ($categorias as $category) {
-            $categoryIngredients = getRelatedIngrediente($calendar->id, $category->id, 'list');
-            $ingredients[$category->id] = $categoryIngredients;
-            $totalCount += count($categoryIngredients);
-        }
+            $ingredients = [];
+            $totalCount = 0;
+            foreach ($categorias as $category) {
+                $categoryIngredients = getRelatedIngrediente($calendar->id, $category->id, 'list');
+                $ingredients[$category->id] = $categoryIngredients;
+                $totalCount += count($categoryIngredients);
+            }
 
-        return response()->json([
-            'calendar' => [
-                'id' => $calendar->id,
-                'title' => $calendar->title,
-            ],
-            'categories' => CategoryResource::collection($categorias),
-            'ingredients' => $ingredients,
-            'taken_ingredients' => $takenIngredients,
-            'custom_items' => ListaItemResource::collection($listaIngredientes),
-            'total_count' => $totalCount,
-        ]);
+            return [
+                'calendar' => [
+                    'id' => $calendar->id,
+                    'title' => $calendar->title,
+                ],
+                'categories' => CategoryResource::collection($categorias)->resolve(),
+                'ingredients' => $ingredients,
+                'taken_ingredients' => $takenIngredients,
+                'custom_items' => ListaItemResource::collection($listaIngredientes)->resolve(),
+                'total_count' => $totalCount,
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -69,36 +96,38 @@ class ListaController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        // Get taken ingredients for this calendar
-        $takenIngredients = DB::table('lista_ingrediente_taken')
-            ->where('calendario_id', $calendar->id)
-            ->get();
+        $cacheKey = $this->listaCacheKey(
+            (int) $calendar->id,
+            'category:' . (int) $categoryId,
+            (string) (optional($calendar->updated_at)->timestamp ?: 'na')
+        );
 
-        // Get the specific category
-        $category = Categoria::findOrFail($categoryId);
+        $payload = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($calendar, $categoryId) {
+            $takenIngredients = DB::table('lista_ingrediente_taken')
+                ->where('calendario_id', $calendar->id)
+                ->get();
 
-        // Get custom lista ingredients for this category
-        $listaIngredientes = ListaIngredientes::where('categoria', $categoryId)
-            ->where('calendario_id', $calendar->id)
-            ->get();
+            $category = Categoria::findOrFail($categoryId);
 
-        // Get recipe ingredients for this category
-        $ingredients = getRelatedIngrediente($calendar->id, $categoryId, 'list');
+            $listaIngredientes = ListaIngredientes::where('categoria', $categoryId)
+                ->where('calendario_id', $calendar->id)
+                ->get();
 
-        // Sort ingredients by calendar day labels if available
-        $ingredientsDataSorted = [];
-        if ($calendar->labels) {
-            $calendarLabels = json_decode($calendar->labels, true);
-            if (isset($calendarLabels['days'])) {
-                foreach ($calendarLabels['days'] as $dayKey => $dayValue) {
-                    foreach ($ingredients as $ingredient) {
-                        if ($ingredient['day'] == $dayKey) {
-                            $ingredientsDataSorted[$dayKey][] = $ingredient;
-                            // Include repeat entries
-                            if (isset($ingredient['repeat'])) {
-                                foreach ($ingredient['repeat'] as $repeat) {
-                                    if ($dayKey == $repeat['day']) {
-                                        $ingredientsDataSorted[$dayKey][] = $repeat;
+            $ingredients = getRelatedIngrediente($calendar->id, $categoryId, 'list');
+
+            $ingredientsDataSorted = [];
+            if ($calendar->labels) {
+                $calendarLabels = json_decode($calendar->labels, true);
+                if (isset($calendarLabels['days'])) {
+                    foreach ($calendarLabels['days'] as $dayKey => $dayValue) {
+                        foreach ($ingredients as $ingredient) {
+                            if ($ingredient['day'] == $dayKey) {
+                                $ingredientsDataSorted[$dayKey][] = $ingredient;
+                                if (isset($ingredient['repeat'])) {
+                                    foreach ($ingredient['repeat'] as $repeat) {
+                                        if ($dayKey == $repeat['day']) {
+                                            $ingredientsDataSorted[$dayKey][] = $repeat;
+                                        }
                                     }
                                 }
                             }
@@ -106,17 +135,19 @@ class ListaController extends Controller
                     }
                 }
             }
-        }
 
-        return response()->json([
-            'calendar_id' => $calendar->id,
-            'category' => new CategoryResource($category),
-            'ingredients' => $ingredients,
-            'ingredients_sorted' => $ingredientsDataSorted,
-            'taken_ingredients' => $takenIngredients,
-            'custom_items' => ListaItemResource::collection($listaIngredientes),
-            'count' => count($ingredients),
-        ]);
+            return [
+                'calendar_id' => $calendar->id,
+                'category' => (new CategoryResource($category))->resolve(),
+                'ingredients' => $ingredients,
+                'ingredients_sorted' => $ingredientsDataSorted,
+                'taken_ingredients' => $takenIngredients,
+                'custom_items' => ListaItemResource::collection($listaIngredientes)->resolve(),
+                'count' => count($ingredients),
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -161,6 +192,8 @@ class ListaController extends Controller
             ->where('calendario_id', $calendar->id)
             ->get();
 
+        $this->forgetListaCache($calendar);
+
         return response()->json([
             'success' => true,
             'action' => $action,
@@ -192,6 +225,8 @@ class ListaController extends Controller
             'nombre' => $validated['nombre'],
             'categoria' => $validated['categoria'],
         ]);
+
+        $this->forgetListaCache($calendar);
 
         return response()->json([
             'success' => true,
@@ -227,6 +262,8 @@ class ListaController extends Controller
             'categoria' => $validated['categoria'],
         ]);
 
+        $this->forgetListaCache($calendar);
+
         return response()->json([
             'success' => true,
             'item' => new ListaItemResource($listaItem),
@@ -249,10 +286,11 @@ class ListaController extends Controller
 
         $listaItem->delete();
 
+        $this->forgetListaCache($calendar);
+
         return response()->json([
             'success' => true,
             'message' => 'Custom ingredient deleted successfully',
         ]);
     }
 }
-
