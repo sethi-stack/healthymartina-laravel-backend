@@ -246,6 +246,8 @@ class CalendarPdfController extends Controller
             'hero_recipe_id' => 'nullable|integer',
             'selected_recipes' => 'nullable|array',
             'selected_recipes.*' => 'integer',
+            'recipient_email_address' => 'nullable|email',
+            'delivery_mode' => 'nullable|in:download,email',
         ]);
 
         $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
@@ -442,6 +444,104 @@ class CalendarPdfController extends Controller
         }
     }
 
+    public function jobEmail(
+        Request $request,
+        string $jobId,
+        ExternalPdfExportService $externalPdfExportService,
+        ExternalMailService $externalMailService
+    ) {
+        $this->prepareExportRuntimeLimits();
+
+        $validated = $request->validate([
+            'recipient_email_address' => 'nullable|email',
+        ]);
+
+        $job = CalendarExportJob::query()
+            ->where('job_id', $jobId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if (!empty($job->external_job_id) && in_array($job->status, ['queued', 'processing'], true)) {
+            try {
+                $status = $externalPdfExportService->status((string) $job->external_job_id);
+                $this->hydrateJobFromExternalStatus($job, $status, $externalPdfExportService);
+            } catch (\Throwable $e) {
+                Log::warning('calendar_export.job.email_status_sync_failed', [
+                    'job_id' => $job->job_id,
+                    'external_job_id' => $job->external_job_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if ($job->status !== 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'El PDF no está listo todavía.',
+            ], 409);
+        }
+
+        if (!$job->external_job_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró referencia del archivo exportado.',
+            ], 404);
+        }
+
+        $recipient = $validated['recipient_email_address']
+            ?? ($job->request_payload['recipient_email_address'] ?? Auth::user()->email);
+
+        if (!filter_var((string) $recipient, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Su correo eléctronico no es valido....',
+            ], 422);
+        }
+
+        try {
+            $download = $externalPdfExportService->downloadBinary((string) $job->external_job_id);
+            $calendarTitle = (string) (optional(Calendar::find($job->calendar_id))->title ?? 'calendario');
+            $fileName = $calendarTitle . '.pdf';
+            $title = '¡Tu plan de alimentación esta listo!';
+
+            $externalMailService->sendPdf(
+                (string) $recipient,
+                $title,
+                'Adjuntamos tu plan de alimentación en PDF.',
+                $fileName,
+                (string) ($download['body'] ?? '')
+            );
+
+            if (!empty(Auth::user()->bemail)) {
+                $externalMailService->sendDeliveryNotice(
+                    (string) Auth::user()->bemail,
+                    'Tu plan de alimentación fue entregado',
+                    'Se entregó correctamente el PDF del calendario al destinatario.',
+                    $fileName,
+                    (string) ($download['body'] ?? '')
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => '¡El envío de correo ha concluido con éxito!',
+                'job_id' => $job->job_id,
+                'status' => $job->status,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('calendar_export.job.email_failed', [
+                'job_id' => $job->job_id,
+                'external_job_id' => $job->external_job_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo enviar el correo del calendario exportado.',
+            ], 502);
+        }
+    }
+
     private function hydrateJobFromExternalStatus(
         CalendarExportJob $job,
         array $status,
@@ -609,6 +709,7 @@ class CalendarPdfController extends Controller
 
         return [
             'template' => $template,
+            'delivery_mode' => (string) ($validated['delivery_mode'] ?? 'download'),
             'export_param' => $exportParams,
             'hero_recipe_id' => $heroRecipeId,
             'heroRecipe' => $heroRecipeId && isset($recipesMap[(string) $heroRecipeId]) ? $recipesMap[(string) $heroRecipeId] : null,

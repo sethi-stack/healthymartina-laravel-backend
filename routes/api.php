@@ -133,6 +133,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/export/pdf/start', [CalendarPdfController::class, 'startJob'])->name('api.v1.calendars.export.pdf.start');
             Route::get('/export/pdf/jobs/{jobId}', [CalendarPdfController::class, 'jobStatus'])->name('api.v1.calendars.export.pdf.jobs.status');
             Route::get('/export/pdf/jobs/{jobId}/download', [CalendarPdfController::class, 'jobDownload'])->name('api.v1.calendars.export.pdf.jobs.download');
+            Route::post('/export/pdf/jobs/{jobId}/email', [CalendarPdfController::class, 'jobEmail'])->name('api.v1.calendars.export.pdf.jobs.email');
 
             // Calendar recipe management
             Route::post('/{id}/recipes', [CalendarController::class, 'addRecipe'])->where('id', '[0-9]+')->name('api.v1.calendars.recipes.add');

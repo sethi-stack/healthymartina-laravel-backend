@@ -21,6 +21,7 @@ function renderStyles(model = {}) {
   <style>
   :root{
     --hm-brand-color:${brandColor};
+    --hm-brand-color-deep: color-mix(in srgb, var(--hm-brand-color) 45%, #1f2937);
     --hm-brand-color-soft: color-mix(in srgb, var(--hm-brand-color) 25%, transparent);
     --hm-brand-logo-url:${brandLogo ? `url(${brandLogo})` : 'none'};
   }
@@ -69,12 +70,77 @@ function renderStyles(model = {}) {
   .checkbox-cell{display:inline-block;width:12px;min-width:12px;text-align:center}
   .item-amount{display:inline-block;color:#555;font-size:8px;font-weight:700;min-width:46px;white-space:nowrap}
   .item-name{display:inline-block;flex:1 1 auto;text-align:left}
-  .page-cover{padding:0;background:#e5e5e5}.cover-photo{height:74vh;padding:34px 26px 0}.cover-photo img{width:100%;height:100%;object-fit:cover;display:block}
-  .cover-footer{height:26vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:28px}
-  .cover-logo{height:18mm;max-width:70mm;object-fit:contain;display:block;margin-bottom:10px}
-  .cover-title{font-size:38px;line-height:1.05;letter-spacing:.04em;margin:0 0 12px;text-transform:uppercase;font-weight:800;color:var(--hm-brand-color)}
-  .cover-rule{width:360px;height:2px;background:#444;margin-bottom:12px}.cover-brand{font-size:31px;line-height:1.1;font-weight:700;color:var(--hm-brand-color);margin-bottom:6px}
-  .cover-email{font-size:31px;line-height:1.1;font-weight:800;color:#101010}.cover-mark{margin-top:14px;font-size:34px;line-height:1;color:#d8b242}
+  .page-cover{
+    padding:0;
+    background:#efefef;
+    position:relative;
+  }
+  .page-cover::before{
+    content:'';
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:50%;
+    background:var(--hm-brand-color-soft);
+    pointer-events:none;
+    z-index:0;
+  }
+  .page-cover > *{position:relative;z-index:1}
+  .cover-photo{
+    height:74vh;
+    padding:34px 26px 0;
+    background:transparent;
+  }
+  .cover-photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .cover-footer{
+    height:26vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding-top:18px;
+    background:transparent;
+  }
+  .cover-logo{
+    order:5;
+    margin-top:8px;
+    height:9mm;
+    max-width:30mm;
+    object-fit:contain;
+    display:block;
+  }
+  .cover-title{
+    font-size:11.5pt;
+    line-height:1.1;
+    letter-spacing:.06em;
+    margin:0 0 7px;
+    text-transform:uppercase;
+    font-weight:700;
+    color:#1f5d6d;
+    text-align:center;
+  }
+  .cover-rule{
+    width:280px;
+    max-width:70%;
+    height:2px;
+    background:#444;
+    margin:0 0 8px;
+  }
+  .cover-brand{
+    font-size:10.5pt;
+    line-height:1.1;
+    font-weight:700;
+    color:#1f5d6d;
+    margin-bottom:5px;
+  }
+  .cover-email{
+    font-size:10.5pt;
+    line-height:1.1;
+    font-weight:800;
+    color:#101010;
+    margin-bottom:0;
+  }
   .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 12px;position:relative}
   /* Background overlay treatment (legacy-style) — full-page band behind the image page only. */
   .recipe-page-primary{position:relative}
@@ -84,7 +150,7 @@ function renderStyles(model = {}) {
     left:0;
     top:0;
     width:100%;
-    height:50%;
+    height:357pt;
     background:var(--hm-brand-color-soft);
     pointer-events:none;
     z-index:0;
