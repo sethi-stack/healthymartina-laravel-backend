@@ -11,12 +11,13 @@ function chunk(arr, size) {
 
 function renderLista(model) {
   const categories = model.lista?.categories || [];
-  const taken = new Set(model.lista?.takenIds || []);
+  const taken = new Set((model.lista?.takenIds || []).map((id) => String(id)));
   if (!categories.length) return '';
 
   const renderCol = (arr) => arr.map((cat) => {
     const items = (cat.items || []).map((item) => {
-      const isTaken = item.id && taken.has(item.id);
+      const ingredientId = item.id ?? item.ingrediente_id ?? null;
+      const isTaken = ingredientId !== null && taken.has(String(ingredientId));
       return `<div class="lista-item-row">
         <span class="checkbox-cell">${isTaken ? '&#9745;' : '&#9744;'}</span>
         <span class="item-amount ${isTaken ? 'item-taken' : ''}">${esc(item.amount || '')}</span>

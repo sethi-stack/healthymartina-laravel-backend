@@ -707,12 +707,32 @@ class CalendarPdfController extends Controller
             ];
         }
 
+        $resolvedHeroRecipeId = $heroRecipeId;
+        if ($resolvedHeroRecipeId && !isset($recipesMap[(string) $resolvedHeroRecipeId])) {
+            $resolvedHeroRecipeId = null;
+        }
+        if (!$resolvedHeroRecipeId && !empty($selected)) {
+            $firstSelected = (int) ($selected[0] ?? 0);
+            if ($firstSelected > 0 && isset($recipesMap[(string) $firstSelected])) {
+                $resolvedHeroRecipeId = $firstSelected;
+            }
+        }
+        if (!$resolvedHeroRecipeId && !empty($calendarRecipeIds)) {
+            $firstCalendarRecipeId = (int) ($calendarRecipeIds[0] ?? 0);
+            if ($firstCalendarRecipeId > 0 && isset($recipesMap[(string) $firstCalendarRecipeId])) {
+                $resolvedHeroRecipeId = $firstCalendarRecipeId;
+            }
+        }
+
         return [
             'template' => $template,
             'delivery_mode' => (string) ($validated['delivery_mode'] ?? 'download'),
             'export_param' => $exportParams,
-            'hero_recipe_id' => $heroRecipeId,
-            'heroRecipe' => $heroRecipeId && isset($recipesMap[(string) $heroRecipeId]) ? $recipesMap[(string) $heroRecipeId] : null,
+            'hero_recipe_id' => $resolvedHeroRecipeId,
+            'heroRecipe' => $resolvedHeroRecipeId && isset($recipesMap[(string) $resolvedHeroRecipeId]) ? $recipesMap[(string) $resolvedHeroRecipeId] : null,
+            // Ensure cover can always render when a hero recipe exists but lacks image.
+            'placeholderImage' => public_path('img/recetas/imagen-receta-principal.jpg'),
+            'placeholderImageSrc' => $this->buildPlaceholderSvgDataUri(),
             'selected_recipes' => $selected,
             'recipePages' => $recipePages,
             'nutritionByDay' => $nutritionByDay,

@@ -72,7 +72,7 @@ function renderStyles(model = {}) {
   .item-name{display:inline-block;flex:1 1 auto;text-align:left}
   .page-cover{
     padding:0;
-    background:#efefef;
+    background:#fff;
     position:relative;
   }
   .page-cover::before{

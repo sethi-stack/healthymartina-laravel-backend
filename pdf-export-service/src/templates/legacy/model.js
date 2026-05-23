@@ -160,7 +160,7 @@ function buildLegacyBoldModel(job) {
   return {
     cover: {
       title: snapshot.title || `Calendario ${job.calendarId}`,
-      image: payload.heroRecipe?.imagen_principal || payload.placeholderImage || '',
+      image: payload.heroRecipe?.imagen_principal || payload.placeholderImage || payload.placeholderImageSrc || '',
       brandName: payload.brandName || 'Healthy Martina',
       brandEmail: payload.brandEmail || 'cristina@healthymartina.com',
       brandLogo: payload.brandLogo || '',
