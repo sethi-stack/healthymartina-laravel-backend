@@ -52,7 +52,7 @@ class TemplateCrudController extends CrudController
             [
                 'name' => 'active',
                 'type' => 'boolean',
-                'label' => 'Activo',
+                'label' => '¿Está activo?',
             ],
             [
                 'name' => 'filter',
@@ -77,7 +77,35 @@ class TemplateCrudController extends CrudController
     protected function setupCreateOperation()
     {
         CRUD::setValidation(StoreRequest::class);
+
+        // Legacy behavior: HTML editor for template body.
         CRUD::setFromDb(); // set fields from db columns.
+        $this->crud->removeAllFields();
+        $this->crud->addFields([
+            [
+                'name' => 'name',
+                'type' => 'text',
+                'label' => 'Nombre',
+            ],
+            [
+                'name' => 'active',
+                'type' => 'boolean',
+                'label' => '¿Está activo?',
+            ],
+            [
+                'name' => 'filter',
+                'type' => 'text',
+                'label' => 'Filtro',
+            ],
+            [
+                'name' => 'content',
+                'type' => 'summernote',
+                'label' => 'Contenido',
+                'options' => [
+                    'height' => 350,
+                ],
+            ],
+        ]);
     }
 
     /**

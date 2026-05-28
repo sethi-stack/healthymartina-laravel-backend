@@ -116,7 +116,7 @@ class Comment extends Model
 
     public function getRecipeNameAttribute()
     {
-        return $this->recipes()->first()->titulo;
+        return $this->recipes()->first()?->titulo;
         // return Receta::find(DB::table('comment_receta')->whereCommentId($this->id)->first()->receta_id)->titulo;
     }
 
@@ -133,6 +133,11 @@ class Comment extends Model
 
     public function getRecipeNameAdminAttribute()
     {
-        return Receta::find(DB::table('comment_receta')->whereCommentId($this->id)->first()->receta_id)->titulo;
+        $pivot = DB::table('comment_receta')->whereCommentId($this->id)->first();
+        if (!$pivot) {
+            return null;
+        }
+
+        return Receta::find($pivot->receta_id)?->titulo;
     }
 }

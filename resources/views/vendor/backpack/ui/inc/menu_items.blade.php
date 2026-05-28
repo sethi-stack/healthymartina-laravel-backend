@@ -25,6 +25,7 @@
 <li class="nav-item"><a class="nav-link" href="{{ backpack_url('terms-conditions') }}"><i class="la la-file-text-o nav-icon"></i><span>Términos y condiciones</span></a></li>
 <li class="nav-item"><a class="nav-link" href="{{ backpack_url('templates') }}"><i class="la la-file-text-o nav-icon"></i><span>Plantilla</span></a></li>
 <li class="nav-item"><a class="nav-link" href="{{ backpack_url('privacy-notice') }}"><i class="la la-file-text-o nav-icon"></i><span>Aviso de privacidad</span></a></li>
-<li class="nav-item"><a class="nav-link" href="{{ backpack_url('equivalence') }}"><i class="la la-file-text-o nav-icon"></i><span>Equivalencias</span></a></li>
-<li class="nav-item"><a class="nav-link" href="{{ backpack_url('comment') }}"><i class="la la-file-text-o nav-icon"></i><span>Comentarios</span></a></li>
-<li class="nav-item"><a class="nav-link" href="{{ backpack_url('youtube-channel') }}"><i class="la la-tag nav-icon"></i> <span>Canal de YT</span></a></li>
+	<li class="nav-item"><a class="nav-link" href="{{ backpack_url('equivalence') }}"><i class="la la-file-text-o nav-icon"></i><span>Equivalencias</span></a></li>
+	<li class="nav-item"><a class="nav-link" href="{{ backpack_url('comment') }}"><i class="la la-file-text-o nav-icon"></i><span>Comentarios</span></a></li>
+	{{-- Hidden (legacy admin menu doesn't show this item) --}}
+	{{-- <li class="nav-item"><a class="nav-link" href="{{ backpack_url('youtube-channel') }}"><i class="la la-tag nav-icon"></i> <span>Canal de YT</span></a></li> --}}

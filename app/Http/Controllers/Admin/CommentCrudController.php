@@ -43,6 +43,19 @@ class CommentCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::setFromDb(); // set columns from db columns.
+
+        // Add associated recipe title (legacy admin convenience).
+        $this->crud->addColumn([
+            'name' => 'recipe_name_admin',
+            'type' => 'text',
+            'label' => 'Receta',
+        ]);
+
+        // Make it the 2nd column (right after the first/default column).
+        $firstColumnKey = array_key_first($this->crud->columns());
+        if ($firstColumnKey) {
+            $this->crud->afterColumn($firstColumnKey);
+        }
     }
 
     /**
