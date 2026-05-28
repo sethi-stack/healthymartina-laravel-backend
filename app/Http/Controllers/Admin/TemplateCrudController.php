@@ -42,7 +42,30 @@ class TemplateCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        // Legacy-aligned list: keep it minimal & readable.
+        $this->crud->setColumns([
+            [
+                'name' => 'name',
+                'type' => 'text',
+                'label' => 'Nombre',
+            ],
+            [
+                'name' => 'active',
+                'type' => 'boolean',
+                'label' => 'Activo',
+            ],
+            [
+                'name' => 'filter',
+                'type' => 'text',
+                'label' => 'Filtro',
+                'limit' => 80,
+            ],
+            [
+                'name' => 'updated_at',
+                'type' => 'datetime',
+                'label' => 'Actualizado',
+            ],
+        ]);
     }
 
     /**

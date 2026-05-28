@@ -43,6 +43,15 @@ class MedidaCrudController extends CrudController
     protected function setupListOperation()
     {
         CRUD::setFromDb(); // set columns from db columns.
+
+        // Show the related TipoMedida value (legacy behavior), not the raw FK/id.
+        $this->crud->removeColumn('tipo_medida_id');
+        $this->crud->addColumn([
+            'name' => 'tipoMedida',
+            'type' => 'relationship',
+            'label' => 'Tipo de medida',
+            'attribute' => 'nombre',
+        ]);
     }
 
     /**
@@ -55,6 +64,15 @@ class MedidaCrudController extends CrudController
     {
         CRUD::setValidation(StoreRequest::class);
         CRUD::setFromDb(); // set fields from db columns.
+
+        // Replace FK with relationship selector.
+        $this->crud->removeField('tipo_medida_id');
+        $this->crud->addField([
+            'name' => 'tipoMedida',
+            'type' => 'relationship',
+            'label' => 'Tipo de medida',
+            'attribute' => 'nombre',
+        ]);
     }
 
     /**

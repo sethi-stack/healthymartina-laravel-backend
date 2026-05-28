@@ -42,26 +42,30 @@ class IngredienteCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::addColumn([
-            'name' => 'id',
-            'label' => 'ID',
-        ]);
-
-        CRUD::addColumn([
-            'name' => 'nombre',
-            'label' => 'Nombre',
-        ]);
-
-        CRUD::addColumn([
-            'name' => 'active',
-            'label' => 'Activo',
-            'type' => 'boolean',
-        ]);
-
-        CRUD::addColumn([
-            'name' => 'created_at',
-            'label' => 'Creado',
-            'type' => 'datetime',
+        // Legacy-aligned columns.
+        $this->crud->setColumns([
+            [
+                'name' => 'nombre',
+                'type' => 'text',
+                'label' => 'Nombre',
+            ],
+            [
+                'name' => 'categoria',
+                'type' => 'relationship',
+                'label' => 'Categoría',
+                'attribute' => 'nombre',
+            ],
+            [
+                'name' => 'fdc_id',
+                'type' => 'text',
+                'label' => 'FDC ID',
+            ],
+            [
+                'name' => 'aparece_en',
+                'type' => 'model_function',
+                'label' => 'Nº recetas',
+                'function_name' => 'getApareceEn',
+            ],
         ]);
     }
 

@@ -135,6 +135,21 @@ class Ingrediente extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function getFdcIdAttribute()
+    {
+        if (!empty($this->attributes['usda'])) {
+            return $this->attributes['usda'];
+        }
+
+        if (empty($this->attributes['fdc_raw'])) {
+            return null;
+        }
+
+        $fdcRaw = json_decode($this->attributes['fdc_raw'], true);
+
+        return $fdcRaw['fdcId'] ?? null;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

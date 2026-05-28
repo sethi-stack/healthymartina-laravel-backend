@@ -42,7 +42,14 @@ class TipoMedidaCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        // Keep this list minimal (legacy): only "nombre" + action buttons.
+        $this->crud->setColumns([
+            [
+                'name' => 'nombre',
+                'type' => 'text',
+                'label' => 'Nombre',
+            ],
+        ]);
     }
 
     /**
