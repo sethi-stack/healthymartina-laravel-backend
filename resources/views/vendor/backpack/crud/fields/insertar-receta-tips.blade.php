@@ -129,7 +129,7 @@
             var textBefore;
             var textAfter;
             var nowText;
-            var cursosPosition = 0;
+            var cursorPosition = 0;
 
             textareaTips.on('mouseup keydown', function() {// Posición del cursor dentro del textarea
               cursorPosition = $(this).caret();

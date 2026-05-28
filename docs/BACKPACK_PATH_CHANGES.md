@@ -117,6 +117,14 @@ Updated these files to load Select2 via Basset/CDN:
 - `laravel-backend-app/resources/views/vendor/backpack/crud/fields/ingredientes_recetas_field.blade.php`
 - `laravel-backend-app/resources/views/vendor/backpack/crud/fields/insertar-receta-tips.blade.php`
 
+### 6) How nutrition info is populated (FDC-derived)
+
+In this codebase, recipe nutrition is stored in `recetas.nutrient_info` (JSON) and is computed from each ingredient’s `fdc_raw`.
+
+The computation happens inside the model method `NewReceta::getInformacionNutrimental(...)` (it sums nutrients from ingredients/sub-recipes, then persists by doing `$this->nutrient_info = $data; $this->save();`).
+
+Practically: it is **not** a Backpack CRUD input. It gets populated when the backend code path calls that method (commonly when the recipe is requested/used in the frontend/API).
+
 ## Notes on removed “workaround” overrides
 
 We briefly added extra safeguards (like switching `let` → `var` or scoping scripts) to stop redeclaration errors.

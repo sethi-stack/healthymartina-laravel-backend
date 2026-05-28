@@ -95,6 +95,14 @@ class RecipeController extends Controller
                 'reactions',
             ])
             ->firstOrFail();
+
+        // Ensure `nutrient_info` is computed for the API response.
+        try {
+            $recipe->getInformacionNutrimental();
+            $recipe->refresh();
+        } catch (\Throwable $e) {
+            // noop
+        }
         return new RecipeResource($recipe);
     }
 

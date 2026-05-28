@@ -90,19 +90,19 @@ class RecipeResource extends JsonResource
 
         foreach ($this->nutrient_info as $fdcId => $nutrientData) {
             $nutriente = $nutrientes->get($fdcId);
-            
-            if (!$nutriente || !($nutrientData['mostrar'] ?? true)) {
-                continue;
-            }
+            // Don't hard-filter nutrients here. The frontend already receives `filter_info`
+            // (user preferences) and can decide what to show. Historically, some nutrient
+            // definitions had `mostrar=0` in DB which hid macros like carbs/protein/fat.
+            // We always return the nutrient values we have.
 
             $formatted['info'][] = [
-                'id' => $nutriente->id,
-                'nombre' => $nutriente->nombre,
+                'id' => $nutriente->id ?? null,
+                'nombre' => $nutriente->nombre ?? ($nutrientData['nombre'] ?? (string) $fdcId),
                 'cantidad' => $nutrientData['cantidad'] ?? 0,
                 'unidad_medida' => $nutrientData['unidad_medida'] ?? $nutriente->unidad_medida ?? 'g',
                 'porcentaje' => $nutrientData['porcentaje'] ?? '-',
                 'color' => $nutrientData['color'] ?? '#dcb244',
-                'mostrar' => $nutrientData['mostrar'] ?? true,
+                'mostrar' => $nutrientData['mostrar'] ?? ($nutriente->mostrar ?? true),
             ];
         }
 
@@ -141,4 +141,3 @@ class RecipeResource extends JsonResource
         return $filterInfo;
     }
 }
-

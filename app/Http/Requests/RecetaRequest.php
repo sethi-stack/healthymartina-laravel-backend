@@ -24,21 +24,67 @@ class RecetaRequest extends FormRequest
      */
     public function rules()
     {
+        $imageUploadOrBase64Rule = function (string $attribute, mixed $value, \Closure $fail): void {
+            if ($value === null || $value === '') {
+                return;
+            }
+
+            // If Backpack sends a real uploaded file, let the built-in validation handle it.
+            if ($value instanceof \Illuminate\Http\UploadedFile) {
+                $validator = \Validator::make(
+                    [$attribute => $value],
+                    [$attribute => 'image|max:2048'],
+                    [
+                        "{$attribute}.image" => 'La imagen debe ser un archivo de imagen válido.',
+                        "{$attribute}.max" => 'La imagen no puede ser mayor a 2MB.',
+                    ]
+                );
+                if ($validator->fails()) {
+                    $fail($validator->errors()->first($attribute));
+                }
+                return;
+            }
+
+            if (!is_string($value)) {
+                $fail("El campo {$attribute} debe ser una imagen válida.");
+                return;
+            }
+
+            // When editing, Backpack may send the existing stored path as a string.
+            // In that case we should accept it as-is (no new upload to validate).
+            if (!\Illuminate\Support\Str::startsWith($value, 'data:image')) {
+                return;
+            }
+
+            if (!preg_match('#^data:image/(png|jpe?g|webp|gif);base64,#i', $value)) {
+                $fail("El campo {$attribute} debe ser una imagen válida.");
+                return;
+            }
+
+            $base64 = substr($value, strpos($value, ',') + 1);
+            $decoded = base64_decode($base64, true);
+            if ($decoded === false) {
+                $fail("El campo {$attribute} debe ser una imagen válida.");
+                return;
+            }
+
+            // 2MB limit (same as max:2048 for UploadedFile)
+            if (strlen($decoded) > 2 * 1024 * 1024) {
+                $fail("El campo {$attribute} no puede ser mayor a 2MB.");
+            }
+        };
+
         return [
             'titulo' => 'required|min:2|max:255',
             'tiempo' => 'nullable|numeric|min:1',
             'porciones' => 'nullable|numeric|min:1',
-            'descripcion' => 'nullable|string',
             'instrucciones' => 'nullable|string',
             'active' => 'boolean',
             'editado' => 'boolean',
             'free' => 'boolean',
-            'calorias' => 'nullable|numeric|min:0',
-            'carbohidratos' => 'nullable|numeric|min:0',
-            'proteinas' => 'nullable|numeric|min:0',
-            'grasas' => 'nullable|numeric|min:0',
-            'imagen_principal' => 'nullable|image|max:2048',
-            'imagen_secundaria' => 'nullable|image|max:2048',
+            // Backpack's `image` field may submit either an UploadedFile or a base64 data URL.
+            'imagen_principal' => ['nullable', $imageUploadOrBase64Rule],
+            'imagen_secundaria' => ['nullable', $imageUploadOrBase64Rule],
         ];
     }
 
@@ -53,15 +99,10 @@ class RecetaRequest extends FormRequest
             'titulo' => 'título de la receta',
             'tiempo' => 'tiempo de preparación',
             'porciones' => 'número de porciones',
-            'descripcion' => 'descripción',
             'instrucciones' => 'instrucciones',
             'active' => 'activo',
             'editado' => 'editado',
             'free' => 'gratis',
-            'calorias' => 'calorías',
-            'carbohidratos' => 'carbohidratos',
-            'proteinas' => 'proteínas',
-            'grasas' => 'grasas',
             'imagen_principal' => 'imagen principal',
             'imagen_secundaria' => 'imagen secundaria',
         ];

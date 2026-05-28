@@ -86,7 +86,6 @@ class RecetaCrudController extends CrudController
         CRUD::addField(['name' => 'titulo',     'label' => 'Título',           'type' => 'text',    'wrapperAttributes' => ['class' => 'form-group col-md-6']]);
         CRUD::addField(['name' => 'tiempo',     'label' => 'Tiempo (minutos)', 'type' => 'number',  'wrapperAttributes' => ['class' => 'form-group col-md-6']]);
         CRUD::addField(['name' => 'tiempo_nota','label' => 'Nota de Tiempo',   'type' => 'textarea','attributes' => ['style' => 'height:150px']]);
-        CRUD::addField(['name' => 'descripcion','label' => 'Descripción',      'type' => 'textarea']);
 
         // ── Resultado ──────────────────────────────────────────────────────
         CRUD::addField([
@@ -220,12 +219,6 @@ class RecetaCrudController extends CrudController
             'crop'         => true,
             'aspect_ratio' => 2.84,
         ]);
-
-        // ── Nutritional ────────────────────────────────────────────────────
-        CRUD::addField(['name' => 'calorias',      'label' => 'Calorías',         'type' => 'number', 'attributes' => ['step' => '0.01'], 'wrapperAttributes' => ['class' => 'form-group col-md-3']]);
-        CRUD::addField(['name' => 'carbohidratos', 'label' => 'Carbohidratos (g)','type' => 'number', 'attributes' => ['step' => '0.01'], 'wrapperAttributes' => ['class' => 'form-group col-md-3']]);
-        CRUD::addField(['name' => 'proteinas',     'label' => 'Proteínas (g)',    'type' => 'number', 'attributes' => ['step' => '0.01'], 'wrapperAttributes' => ['class' => 'form-group col-md-3']]);
-        CRUD::addField(['name' => 'grasas',        'label' => 'Grasas (g)',       'type' => 'number', 'attributes' => ['step' => '0.01'], 'wrapperAttributes' => ['class' => 'form-group col-md-3']]);
 
         // ── Tags ───────────────────────────────────────────────────────────
         CRUD::addField([

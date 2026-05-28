@@ -79,7 +79,7 @@ class RecipeService
      */
     public function getRecipeBySlug(string $slug)
     {
-        return Receta::where('slug', $slug)
+        $recipe = Receta::where('slug', $slug)
             ->with([
                 'tags',
                 'comments' => function ($query) {
@@ -88,6 +88,17 @@ class RecipeService
                 'reactions',
             ])
             ->firstOrFail();
+
+        // Ensure `nutrient_info` is present for the frontend/API.
+        // In this codebase it is derived from ingredients' `fdc_raw` and computed lazily.
+        try {
+            $recipe->getInformacionNutrimental();
+            $recipe->refresh();
+        } catch (\Throwable $e) {
+            // If nutrition calc fails, still return the recipe.
+        }
+
+        return $recipe;
     }
 
     /**

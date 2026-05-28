@@ -7,6 +7,7 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Support\Str;
+use App\Support\Base64Image;
 
 
 
@@ -97,7 +98,9 @@ class Plan extends Model
         // if the image was erased
         if ($value==null) {
             // delete the image from disk
-            \Storage::delete($this->{$attribute_name});
+            if (!empty($this->{$attribute_name})) {
+                \Storage::disk($disk)->delete($this->{$attribute_name});
+            }
 
             // set null in the database column
             $this->attributes[$attribute_name] = null;
@@ -106,12 +109,11 @@ class Plan extends Model
         // if a base64 was sent, store it in the db
         if (is_string($value) && Str::startsWith($value, 'data:image'))
         {
-            // 0. Make the image
-            $image = \Image::make($value)->encode('jpg', 90);
+            $jpegBinary = Base64Image::toJpegBinary($value, 90);
             // 1. Generate a filename.
             $filename = md5($value.time()).'.jpg';
             // 2. Store the image on disk.
-            \Storage::put($destination_path.'/'.$filename, $image->stream());
+            \Storage::disk($disk)->put($destination_path.'/'.$filename, $jpegBinary);
             // 3. Save the public path to the database
         // but first, remove "public/" from the path, since we're pointing to it from the root folder
         // that way, what gets saved in the database is the user-accesible URL
