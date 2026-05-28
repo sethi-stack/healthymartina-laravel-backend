@@ -39,8 +39,8 @@
               "<td class='columnas-editables cantidad'>" + value[i].cantidad_resultado + "</td>" +
 							"<td class='columnas-editables-selector medida' style='padding-left: 8px' data-medida_id='"+ value[i].medida +"'>" + value[i].medida_nombre + "</td>" +
 							"<td class='columnas-editables-sino' style='padding-left: 8px' data-active_id='"+ value[i].active +"'>" + getActiveResultadoText(value[i].active) + "</td>" +
-							"<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_edit'><i style='font-size: 18px;' class='fa fa-pencil' aria-hidden='true'></i></button></td>" +
-							"<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='fa fa-trash-o' aria-hidden='true'></i></button></td>" +
+							"<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_edit'><i style='font-size: 18px;' class='la la-pencil' aria-hidden='true'></i></button></td>" +
+							"<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='la la-trash' aria-hidden='true'></i></button></td>" +
               +"</tr>";
               dataIndexActual = i + 1;
               tabla_resultados.append(row);
@@ -76,8 +76,8 @@
                 "<td class='columnas-editables cantidad'>" + cantidad_resultado.val() + "</td>" + 
                 "<td class='columnas-editables-selector medida' data-medida_id='"+$("[name='medida_id'] option:selected").val()+"'>" + $("[name='medida_id'] option:selected").html() + "</td>" +  
                 "<td class='columnas-editables-sino' data-active_id='"+getActiveResultadoValue()+"'>" + getActiveResultadoText(getActiveResultadoValue()) + "</td>"  +
-                "<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_edit'><i style='font-size: 18px;' class='fa fa-pencil' aria-hidden='true'></i></button></td>" +
-                "<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='fa fa-trash-o' aria-hidden='true'></i></button></td></tr>";
+                "<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_edit'><i style='font-size: 18px;' class='la la-pencil' aria-hidden='true'></i></button></td>" +
+                "<td style='padding-left: 25px'><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='la la-trash' aria-hidden='true'></i></button></td></tr>";
               dataIndexActual++;
               tabla_resultados.append(row);
             }

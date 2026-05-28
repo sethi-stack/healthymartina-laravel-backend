@@ -96,8 +96,8 @@
   							          + "<td class='columnas-editables cantidad'>" + value[i].cantidad  + "</td>" 
                           + "<td class='columnas-editables-selector medida' data-medida_nombre='"+ value[i].medida_nombre +"' data-medida_id='"+ value[i].medida +"' >"  + value[i].medida_nombre + "</td>"
   							          + "<td class='columnas-editables nota'>" + value[i].nota + "</td>" 
-                          + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='fa fa-pencil' aria-hidden='true'></i></button></td>" 
-                          + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='fa fa-trash-o' aria-hidden='true'></i></button></td>"
+                          + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='la la-pencil' aria-hidden='true'></i></button></td>" 
+                          + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='la la-trash' aria-hidden='true'></i></button></td>"
                         + "</tr>";
               }
               else{
@@ -108,8 +108,8 @@
   							          + "<td class='columnas-editables cantidad'>" + value[i].cantidad  + "</td>" 
                           + "<td class='columnas-editables-selector medida' data-medida_nombre='"+ value[i].medida_nombre +"' data-medida_id='"+ value[i].medida +"' >"  + value[i].medida_nombre + "</td>"
   							          + "<td class='columnas-editables nota'>" + value[i].nota + "</td>" 
-                          + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='fa fa-pencil' aria-hidden='true'></i></button></td>" 
-                          + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='fa fa-trash-o' aria-hidden='true'></i></button></td>"
+                          + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='la la-pencil' aria-hidden='true'></i></button></td>" 
+                          + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='la la-trash' aria-hidden='true'></i></button></td>"
                         + "</tr>";
               }
 
@@ -194,8 +194,8 @@
                     + "<td class='columnas-editables cantidad'>" + cantidad.val() + "</td>" 
                     + "<td class='columnas-editables-selector medida' data-medida_nombre='"+ $("[name='medida'] option:selected").html() +"' data-medida_id='"+ $("[name='medida'] option:selected").val() +"' >" + $("[name='medida'] option:selected").html() +"</td>" 
                     + "<td class='columnas-editables nota'>" + nota.val() + "</td>" 
-                    + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='fa fa-pencil' aria-hidden='true'></i></button></td>" 
-                    + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='fa fa-trash-o' aria-hidden='true'></i></button></td>" 
+                    + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='la la-pencil' aria-hidden='true'></i></button></td>" 
+                    + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='la la-trash' aria-hidden='true'></i></button></td>" 
                   + "</tr>";
               }
               else{
@@ -206,8 +206,8 @@
                     + "<td class='columnas-editables cantidad'>" + cantidad.val() + "</td>" 
                     + "<td class='columnas-editables-selector medida' data-medida_nombre='"+ $("[name='medida'] option:selected").html() +"' data-medida_id='"+ $("[name='medida'] option:selected").val() +"' >" + $("[name='medida'] option:selected").html() +"</td>" 
                     + "<td class='columnas-editables nota'>" + nota.val() + "</td>" 
-                    + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='fa fa-pencil' aria-hidden='true'></i></button></td>" 
-                    + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='fa fa-trash-o' aria-hidden='true'></i></button></td>" 
+                    + "<td><button style='padding: 3px 6px;' type='button' class='btn-edit btn btn-warning dropdown-toggle'><i style='font-size: 18px;' class='la la-pencil' aria-hidden='true'></i></button></td>" 
+                    + "<td><button style='padding: 3px 6px;' type='button' class='btn btn-warning dropdown-toggle btn_trash'><i style='font-size: 18px;' class='la la-trash' aria-hidden='true'></i></button></td>" 
                   + "</tr>";
               }
 

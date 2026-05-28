@@ -113,7 +113,7 @@ class RecetaCrudController extends CrudController
             'type'  => 'lista_resultado',
             'wrapperAttributes' => ['class' => 'form-group col-md-1'],
             'value' => '<button style="margin-top:23px" id="btn_agregar_resultado_receta" type="button" class="btn btn-default">
-                            <i style="font-size:25px" class="fa fa-plus-circle" aria-hidden="true"></i>
+                            <i style="font-size:25px" class="la la-plus-circle" aria-hidden="true"></i>
                         </button>',
         ]);
         CRUD::addField([
@@ -164,7 +164,7 @@ class RecetaCrudController extends CrudController
             'type'  => 'lista_ingredientes',
             'wrapperAttributes' => ['class' => 'form-group col-md-1'],
             'value' => '<button style="margin-top:23px" id="btn_agregar_ingredientes_receta" type="button" class="btn btn-default">
-                            <i style="font-size:25px" class="fa fa-plus-circle" aria-hidden="true"></i>
+                            <i style="font-size:25px" class="la la-plus-circle" aria-hidden="true"></i>
                         </button>',
         ]);
         CRUD::addField([
@@ -199,7 +199,7 @@ class RecetaCrudController extends CrudController
             'options_recetas' => Receta::orderBy('titulo')->pluck('titulo', 'id')->toArray(),
             'wrapperAttributes' => ['class' => 'form-group col-md-1'],
             'value'           => '<button style="margin-top:23px" id="btn_agregar_receta_tip" type="button" class="btn btn-default">
-                                      <i style="font-size:25px" class="fa fa-plus-circle" aria-hidden="true"></i>
+                                      <i style="font-size:25px" class="la la-plus-circle" aria-hidden="true"></i>
                                   </button>',
         ]);
 

@@ -14,7 +14,7 @@
 @includeWhen(!isset($field['wrapper']) || $field['wrapper'] !== false, 'crud::fields.inc.wrapper_start')
 
     <a data-fancybox data-options='{"src": "#modal-agregar-receta", "touch": false, "smallBtn" : false}' href="javascript:;" style="margin-top: 23px" id="btn_agregar_receta_tip" type="button" class="btn btn-default">
-        <i style="font-size: 25px" class="fa fa-plus-circle" aria-hidden="true"></i>
+        <i style="font-size: 25px" class="la la-plus-circle" aria-hidden="true"></i>
     </a>
 
 
