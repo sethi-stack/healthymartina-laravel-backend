@@ -34,9 +34,3 @@ if (typeof $ !== 'undefined') {
 @if (backpack_theme_config('vite_scripts') && count(backpack_theme_config('vite_scripts')))
     @vite(backpack_theme_config('vite_scripts'))
 @endif
-
-@yield('before_scripts')
-@stack('before_scripts')
-
-@yield('after_scripts')
-@stack('after_scripts')
