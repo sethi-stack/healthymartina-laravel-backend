@@ -581,16 +581,12 @@ class Receta extends Model
                 return $item->fdc_id == $nutrientId;
             });
 
-            if (!$nutriente) {
-                $nutriente = new Nutriente();
-                $nutriente->fdc_id = $nutrientId;
-                $nutriente->nombre_ingles = $nutrientInfo['nombre'];
-                $nutriente->nombre = $nutrientInfo['nombre'];
-                $nutriente->unidad_medida = 1; //$nutrientInfo['unidad_medida'];
-                //$nutriente->decimal = 1; //$nutrientInfo['unidad_medida'];
-                $nutriente->cien_porciento = 1;
-                $nutriente->save();
-            } else {
+            // IMPORTANT:
+            // We DO NOT auto-create missing nutrients in the DB from FDC.
+            // The "guidelines" for percentages (cien_porciento/factor/unidad_nueva) are curated in `nutrientes`.
+            // Auto-creating nutrients here explodes the Catalogue->Nutrients list (e.g. 20+ pages) and makes
+            // porcentaje meaningless (defaults to 1).
+            if ($nutriente) {
                 $nutriente->unidad_medida = $nutrientInfo['unidad'];
                 $nutriente->save();
             }
@@ -603,6 +599,17 @@ class Receta extends Model
             // $cantidad = ($cantidad > 0.01 ? number_format($cantidad, 2, '.', ',') : $cantidad);
 
             $data[$nutrientId] = ['orden' => $nutriente->orden, 'nombre' => $nutriente->nombre, 'porcentaje' => $porcentaje, 'color' => $color, 'cantidad' => $cantidad, 'unidad_medida' => $unidad_medida, 'mostrar' => $nutriente->mostrar];
+            if (!$nutriente) {
+                $data[$nutrientId] = [
+                    'orden' => null,
+                    'nombre' => $nutrientInfo['nombre'],
+                    'porcentaje' => '-',
+                    'color' => $color,
+                    'cantidad' => $cantidad,
+                    'unidad_medida' => $unidad_medida,
+                    'mostrar' => 0,
+                ];
+            }
         }
 
         //
@@ -656,16 +663,16 @@ class Receta extends Model
 
             $cantidad = $nutrientInfo['cantidad'];
 
-            if ($nutriente->cien_porciento > 0) {
-                // dd('entre');
-                $porcentaje = $cantidad * 100 / $nutriente->cien_porciento;
+            if ($nutriente) {
+                $cienPorciento = $nutriente->getCienPorciento();
+                $porcentaje = $cienPorciento > 0 ? ($cantidad * 100 / $cienPorciento) : '-';
             } else {
                 $porcentaje = '-';
             }
             // $cantidad = ($cantidad > 0.01 ? number_format($cantidad, 2, '.', ',') : $cantidad);
 
             $data[$nutrientId]['porcentaje'] = $porcentaje;
-            $data[$nutrientId]['id'] = $nutriente->id;
+            $data[$nutrientId]['id'] = $nutriente?->id;
         }
 
         //Sumar vitaminas k

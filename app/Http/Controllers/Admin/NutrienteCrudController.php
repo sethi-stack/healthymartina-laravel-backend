@@ -42,6 +42,14 @@ class NutrienteCrudController extends CrudController
      */
     protected function setupListOperation()
     {
+        // Legacy admin showed far fewer pages for this catalogue.
+        // Override the datatable default page size just for Nutrientes.
+        $this->crud->setDefaultPageLength(100);
+        $this->crud->setPageLengthMenu([[25, 50, 100, 250, -1], [25, 50, 100, 250, 'backpack::crud.all']]);
+
+        // Avoid confusing "21 pages" due to persisted table state from previous defaults.
+        $this->crud->setOperationSetting('persistentTable', false);
+
         CRUD::setFromDb(); // set columns from db columns.
     }
 
