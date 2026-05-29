@@ -369,6 +369,14 @@ class RecetaCrudController extends CrudController
             $rr->save();
         }
 
+        // Compute nutrient_info immediately so it is available even if the recipe is never opened in frontend
+        // (e.g. when it is added straight to the calendar).
+        try {
+            $item->refresh()->getInformacionNutrimental();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         $this->crud->setSaveAction();
         return $this->crud->performSaveAction($item->getKey());
@@ -439,6 +447,13 @@ class RecetaCrudController extends CrudController
             $rr->active    = 1;
             $rr->cantidad  = 2;
             $rr->save();
+        }
+
+        // Recompute nutrient_info after updating relations, for immediate availability (calendar, etc).
+        try {
+            $item->refresh()->getInformacionNutrimental();
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
