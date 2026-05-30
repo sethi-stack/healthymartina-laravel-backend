@@ -6,6 +6,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Redirect framework "dashboard" style routes to Backpack, to avoid confusion.
+Route::get('/dashboard', function () {
+    return redirect()->to(backpack_url('dashboard'));
+})->middleware('auth');
+
 // Test route for Backpack
 Route::get('/test-backpack', function () {
     return 'Backpack test route works!';

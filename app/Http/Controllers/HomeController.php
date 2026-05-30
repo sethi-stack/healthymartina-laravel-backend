@@ -23,6 +23,8 @@ class HomeController extends Controller
      */
     public function index()
     {
-        return view('home');
+        // Avoid confusion with the Backpack admin panel.
+        // This app's admin UI lives under the Backpack route prefix (usually /admin).
+        return redirect()->to(backpack_url('dashboard'));
     }
 }

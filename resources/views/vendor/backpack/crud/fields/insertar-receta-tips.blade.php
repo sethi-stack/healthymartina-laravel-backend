@@ -58,7 +58,7 @@
 
       </select>
 
-      <button data-fancybox-close id="button-agregar-receta-tip" class="btn btn-success" style="margin-top: 10px">Agregar a tips</button>
+	      <button type="button" data-fancybox-close id="button-agregar-receta-tip" class="btn btn-success" style="margin-top: 10px">Agregar a tips</button>
 
       {{-- HINT --}}
       @if (isset($field['hint']))
@@ -135,11 +135,12 @@
               cursorPosition = $(this).caret();
             });
 
-            $('#button-agregar-receta-tip').click(function() {
-              receta = $('[name="receta-a-tip"]').val();
-              nowText = textareaTips.val();
-              textBefore = nowText.substring(0, cursorPosition);
-              textAfter = nowText.substring(cursorPosition, nowText.length);
+	            $('#button-agregar-receta-tip').click(function(e) {
+	              e.preventDefault();
+	              receta = $('[name="receta-a-tip"]').val();
+	              nowText = textareaTips.val();
+	              textBefore = nowText.substring(0, cursorPosition);
+	              textAfter = nowText.substring(cursorPosition, nowText.length);
 
               textareaTips.val(textBefore + "receta[" + receta + "]" + textAfter);
             });

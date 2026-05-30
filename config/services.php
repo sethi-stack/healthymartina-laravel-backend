@@ -52,4 +52,9 @@ return [
         ],
     ],
 
+    // USDA FoodData Central (FDC)
+    'fdc' => [
+        'key' => env('FDC_API_KEY'),
+    ],
+
 ];

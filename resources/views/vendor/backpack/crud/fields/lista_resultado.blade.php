@@ -11,7 +11,11 @@
     jQuery(document).ready(function($) {
 				var medida = $("[name='medida_id']");
 				var cantidad_resultado = $("[name='cantidad_resultado']");
-				var active_resultado = $("[name='active_resultado']");
+					// Backpack checkbox field renders:
+					// - a hidden input WITH name="active_resultado" (this is what gets submitted)
+					// - a checkbox input WITHOUT name (it just toggles the hidden input via JS)
+					// So we must locate the checkbox via the hidden input's siblings.
+						var active_resultado_hidden = $("input[type='hidden'][name='active_resultado']").first();
         var btn_insertar = $("#btn_agregar_resultado_receta");
         var tabla_resultados = $("#tabla_resultados");
 				var input_array = $("input[name='array_resultados']");
@@ -222,24 +226,15 @@
           // console.log('resultados_array', resultados_array);
         });
 
-        function getActiveResultadoValue(){
-          if ($("[name='active_resultado']").is(":checked")){
-            return 1;
-          }
-          else{
-            return 0;
-          }
-        }
-        function getActiveResultadoText(value){
-          if(value){
-            return 'Si';
-          }
-          else{
-            return 'No';
-          }
-        }
+	        function getActiveResultadoValue(){
+	          // Backpack checkbox updates the hidden input's value to 1/0 on toggle.
+	          return Number(active_resultado_hidden.val() || 0) === 1 ? 1 : 0;
+	        }
+	        function getActiveResultadoText(value){
+	          return Number(value) === 1 ? 'Si' : 'No';
+	        }
     });
-</script>
-@endpush
+	</script>
+	@endpush
 
 {{-- End of Extra CSS and JS --}}
