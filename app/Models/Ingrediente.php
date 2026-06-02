@@ -137,6 +137,10 @@ class Ingrediente extends Model
 
     public function getFdcIdAttribute()
     {
+        if (!empty($this->attributes['fdc'])) {
+            return $this->attributes['fdc'];
+        }
+
         if (!empty($this->attributes['usda'])) {
             return $this->attributes['usda'];
         }
@@ -148,6 +152,16 @@ class Ingrediente extends Model
         $fdcRaw = json_decode($this->attributes['fdc_raw'], true);
 
         return $fdcRaw['fdcId'] ?? null;
+    }
+
+    public function getUsdaAttribute()
+    {
+        return $this->attributes['fdc'] ?? null;
+    }
+
+    public function setUsdaAttribute($value): void
+    {
+        $this->attributes['fdc'] = $value;
     }
 
     /*
