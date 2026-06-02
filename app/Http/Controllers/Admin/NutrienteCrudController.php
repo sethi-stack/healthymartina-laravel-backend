@@ -51,6 +51,7 @@ class NutrienteCrudController extends CrudController
         $this->crud->setOperationSetting('persistentTable', false);
 
         CRUD::setFromDb(); // set columns from db columns.
+        CRUD::removeColumn('fdc_id');
     }
 
     /**
@@ -63,6 +64,7 @@ class NutrienteCrudController extends CrudController
     {
         CRUD::setValidation(StoreRequest::class);
         CRUD::setFromDb(); // set fields from db columns.
+        CRUD::removeField('fdc_id');
     }
 
     /**
