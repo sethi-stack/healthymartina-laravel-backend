@@ -307,17 +307,16 @@ class IngredienteCrudController extends CrudController
 
         // Try a few known schema variants (no information_schema access needed).
         $variants = [
-            // prod legacy dump: `nombre` + `equivalencia_gramos` (+ optional equivalencia_medida_id)
-            ['text' => 'nombre', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => true],
-            ['text' => 'nombre', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => false],
+            // Prefer schemas where `cantidad` is the row amount and `equivalencia_gramos` is the conversion value.
             ['text' => 'nombre', 'qty' => 'cantidad', 'with_equivalencia_medida_id' => true],
             ['text' => 'nombre', 'qty' => 'cantidad', 'with_equivalencia_medida_id' => false],
+            ['text' => 'nombre', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => true],
+            ['text' => 'nombre', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => false],
 
-            // newer variants we saw in code
-            ['text' => 'nota_preparacion', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => true],
             ['text' => 'nota_preparacion', 'qty' => 'cantidad', 'with_equivalencia_medida_id' => true],
-            ['text' => 'nota', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => true],
+            ['text' => 'nota_preparacion', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => true],
             ['text' => 'nota', 'qty' => 'cantidad', 'with_equivalencia_medida_id' => true],
+            ['text' => 'nota', 'qty' => 'equivalencia_gramos', 'with_equivalencia_medida_id' => true],
         ];
 
         $lastException = null;
