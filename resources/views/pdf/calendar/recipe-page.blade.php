@@ -289,7 +289,7 @@
     </div>
 
     <div class="notes">
-      {{ $recipe->tips ?? '' }}
+      {{ implode(PHP_EOL, $recipe->getTipsPlain()) }}
     </div>
   </div>
 </body>

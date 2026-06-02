@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use PhpUnitsOfMeasure\PhysicalQuantity\Volume;
 use App\Support\Base64Image;
+use App\Services\NutritionCalculator;
 
 class Receta extends Model
 {
@@ -447,6 +448,29 @@ class Receta extends Model
         return false;
     }
 
+    /**
+     * New entrypoint for nutrition calculation (legacy-compatible).
+     *
+     * This does NOT modify the legacy getInformacionNutrimental() implementation;
+     * it only provides a stable API so we can refactor the internals incrementally.
+     *
+     * @return array{info: array, debug: array, name: string|null}
+     */
+    public function calculateNutritionInfo(
+        int $porcentajeOverride = 100,
+        int $porcionesOverride = 0,
+        int $numeroDivision = 0,
+        int $porcionesDivision = 0,
+    ): array {
+        return app(NutritionCalculator::class)->calculateUsingLegacy(
+            $this,
+            $porcentajeOverride,
+            $porcionesOverride,
+            $numeroDivision,
+            $porcionesDivision,
+        );
+    }
+
     public function getInformacionNutrimental($porcentajeOverride = 100, $porcionesOverride = 0, $numeroDivision = 0, $porcionesDivision = 0)
     {
 
@@ -716,30 +740,37 @@ class Receta extends Model
 
     public function getTips()
     {
-        $tips = preg_split('/\n|\r\n?/', $this->tips);
-        // $tips = explode('\n',$this->tips);
-        $tipsReturn = array();
+        return $this->resolveTipsReferences(true);
+    }
 
-        foreach ($tips as $key => $tip) {
-            $tipsReturn[] = $tip;
-        }
+    public function getTipsPlain()
+    {
+        return $this->resolveTipsReferences(false);
+    }
 
-        for ($i = 0; $i < count($tipsReturn); $i++) {
-            while (strpos($tipsReturn[$i], 'receta[') !== false) {
-                // Encontrar receta
+    private function resolveTipsReferences(bool $linkify = true): array
+    {
+        $tips = preg_split('/\n|\r\n?/', (string) $this->tips);
+        $tipsReturn = [];
 
-                // To fix
-                $inicial = strpos($tipsReturn[$i], 'receta[');
-                $final = strpos($tipsReturn[$i], ']', $inicial);
-
-                $recetaString = substr($tipsReturn[$i], $inicial + 7, $final - $inicial - 7);
-                $recetaTip = Receta::where('id', $recetaString)->get()->first();
-                // dd($recetaString);
-                if ($recetaTip) {
-                    $newLine = '<a target="_blank" href="/receta/' . $recetaTip->slug . '">' . $recetaTip->titulo . '</a>';
-                    $tipsReturn[$i] = str_replace('receta[' . $recetaString . ']', $newLine, $tipsReturn[$i]);
+        foreach ($tips as $tip) {
+            $tipsReturn[] = preg_replace_callback('/receta\[(\d+)\]/', function ($matches) use ($linkify) {
+                $recipeId = (int) ($matches[1] ?? 0);
+                if (!$recipeId) {
+                    return $matches[0];
                 }
-            }
+
+                $recetaTip = self::find($recipeId);
+                if (!$recetaTip) {
+                    return $matches[0];
+                }
+
+                if ($linkify) {
+                    return '<a target="_blank" href="/receta/' . $recetaTip->slug . '">' . e($recetaTip->titulo) . '</a>';
+                }
+
+                return $recetaTip->titulo;
+            }, (string) $tip);
         }
 
         return $tipsReturn;

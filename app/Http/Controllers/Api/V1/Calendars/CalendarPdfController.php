@@ -641,7 +641,7 @@ class CalendarPdfController extends Controller
                     'porciones' => (int) ($recipe->porciones ?? ($recipe->getPorciones()['cantidad'] ?? 1)),
                     'tiempo_elaboracion' => (int) ($recipe->tiempo_elaboracion ?? ($recipe->tiempo ?? 0)),
                     'instrucciones' => array_values($recipe->getInstrucciones() ?? []),
-                    'tips' => (string) ($recipe->tips ?? ''),
+                    'tips' => implode(PHP_EOL, array_values($recipe->getTipsPlain() ?? [])),
                 ],
                 'ingredients' => array_map(function ($ingredient) {
                     return [
