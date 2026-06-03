@@ -15,6 +15,7 @@ use App\Http\Requests\IngredienteRequest as UpdateRequest;
 use App\Models\Ingrediente;
 use App\Models\Instruccion;
 use App\Models\Medida;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
 
 /**
@@ -236,6 +237,7 @@ class IngredienteCrudController extends CrudController
                 ->get()
                 ->map(function ($i) {
                     return [
+                        'id' => $i->id,
                         'nota_preparacion' => $i->nota_preparacion ?? $i->nota ?? $i->nombre ?? '',
                         'sin_conversion' => (int) ($i->sin_conversion ?? 0),
                         'cantidad' => $i->cantidad ?? 0,
@@ -303,17 +305,25 @@ class IngredienteCrudController extends CrudController
     private function syncInstrucciones(int $ingredienteId, array $instructions): void
     {
         DB::transaction(function () use ($ingredienteId, $instructions) {
-            // wipe and recreate (same behavior as legacy inline editors in this codebase)
-            Instruccion::where('ingrediente_id', $ingredienteId)->delete();
-
+            $keptIds = [];
             foreach ($instructions as $row) {
-                $this->createInstruccionRow($ingredienteId, (array) $row);
+                $saved = $this->createInstruccionRow($ingredienteId, (array) $row);
+                if ($saved) {
+                    $keptIds[] = $saved->id;
+                }
             }
+
+            Instruccion::where('ingrediente_id', $ingredienteId)
+                ->when(!empty($keptIds), function ($query) use ($keptIds) {
+                    $query->whereNotIn('id', $keptIds);
+                })
+                ->delete();
         });
     }
 
-    private function createInstruccionRow(int $ingredienteId, array $row): void
+    private function createInstruccionRow(int $ingredienteId, array $row): ?Instruccion
     {
+        $instructionId = (int) ($row['id'] ?? 0);
         $nota = trim((string) ($row['nota_preparacion'] ?? ''));
         $sinConversion = (int) ($row['sin_conversion'] ?? 0);
         $cantidad = is_numeric($row['cantidad'] ?? null) ? (float) $row['cantidad'] : null;
@@ -356,7 +366,7 @@ class IngredienteCrudController extends CrudController
 
         foreach ($variants as $variant) {
             try {
-                $instruccion = new Instruccion();
+                $instruccion = $this->findEditableInstruccion($ingredienteId, $instructionId);
                 $instruccion->ingrediente_id = $ingredienteId;
                 $instruccion->sin_conversion = $sinConversion;
                 $instruccion->medida_id = $medidaId;
@@ -378,7 +388,7 @@ class IngredienteCrudController extends CrudController
                 }
 
                 $instruccion->save();
-                return;
+                return $instruccion;
             } catch (QueryException $e) {
                 // Only keep trying when it's an "unknown column" mismatch.
                 if (!str_contains($e->getMessage(), 'Unknown column')) {
@@ -392,6 +402,20 @@ class IngredienteCrudController extends CrudController
         if ($lastException) {
             throw $lastException;
         }
+
+        return null;
+    }
+
+    private function findEditableInstruccion(int $ingredienteId, int $instructionId): Instruccion
+    {
+        if ($instructionId <= 0) {
+            return new Instruccion();
+        }
+
+        return Instruccion::withTrashed()
+            ->where('ingrediente_id', $ingredienteId)
+            ->where('id', $instructionId)
+            ->firstOrNew();
     }
 
     private function deriveInstructionDefaultsFromFdc(int $ingredienteId): ?array
@@ -535,6 +559,24 @@ class IngredienteCrudController extends CrudController
             ->ascii()
             ->replaceMatches('/[^a-z0-9]+/', '')
             ->toString();
+    }
+
+    public function recipeInstructionOptions(int $id): JsonResponse
+    {
+        $ingredient = Ingrediente::findOrFail($id);
+
+        $instructions = $ingredient->instrucciones()
+            ->orderBy('id')
+            ->get()
+            ->map(function (Instruccion $instruccion) {
+                return [
+                    'id' => $instruccion->id,
+                    'nombre' => $instruccion->nota_preparacion ?? $instruccion->nota ?? $instruccion->nombre ?? '',
+                ];
+            })
+            ->values();
+
+        return response()->json($instructions);
     }
 
     /**

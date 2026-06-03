@@ -34,6 +34,7 @@ Route::group([
 
     Route::post('Recetas/ingrediente-medida/{ing}', 'RecetaCrudController@ingredienteMedida');
     Route::post('Recetas/receta-medida/{ing}', 'RecetaCrudController@recetaMedida');
+    Route::get('Ingredientes/{id}/instrucciones', 'IngredienteCrudController@recipeInstructionOptions');
 
     Route::post('Recetas/MedidasPorInstruccion', 'RecetaCrudController@instruccionMedida');
 

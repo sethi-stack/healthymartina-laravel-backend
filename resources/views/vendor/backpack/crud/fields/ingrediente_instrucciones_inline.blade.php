@@ -238,7 +238,7 @@
     }
 
     function rowHtml(i, row) {
-      return "<tr data-index='"+i+"'>"
+      return "<tr data-index='"+i+"' data-id='"+(row.id || "")+"'>"
         + "<td>"+(i+1)+"</td>"
         + "<td class='columnas-editables nota'>"+(row.nota_preparacion || "")+"</td>"
         + "<td class='columnas-editables cantidad'>"+(row.cantidad ?? "")+"</td>"
@@ -284,6 +284,7 @@
         : (useFdcDefaults ? currentFdcDefaults.medida_nombre : $medidaInput.find('option:selected').text());
       var equivGramos = sinConv ? legacySinConversionDefaults.equivalencia_gramos : (useFdcDefaults ? currentFdcDefaults.equivalencia_gramos : $equivalenciaInput.val());
       var row = {
+        id: null,
         nota_preparacion: nota || (sinConv ? 'NA' : ''),
         sin_conversion: sinConv,
         cantidad: cantidad,
@@ -317,6 +318,11 @@
       var $button = $(this);
       var $row = $button.closest('tr');
       var rowIndex = Number($row.data('index'));
+      var current = instrucciones[rowIndex];
+
+      if (!current) {
+        return;
+      }
 
       if ($button.hasClass('modo-edicion')) {
         var nota = $row.find('.nota input').val();
@@ -329,6 +335,7 @@
         var equivalenciaGramos = sinConversion === 1 ? legacySinConversionDefaults.equivalencia_gramos : $row.find('.equivalencia_gramos input').val();
 
         instrucciones[rowIndex] = {
+          id: current.id || null,
           nota_preparacion: nota || (sinConversion === 1 ? 'NA' : ''),
           cantidad: cantidad,
           medida_id: medidaId,
@@ -343,11 +350,6 @@
       }
 
       $button.addClass('modo-edicion');
-
-      var current = instrucciones[rowIndex];
-      if (!current) {
-        return;
-      }
 
       $row.find('td.columnas-editables').each(function() {
         var $cell = $(this);

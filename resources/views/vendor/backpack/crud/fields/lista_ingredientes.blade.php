@@ -10,6 +10,7 @@
 
 <script>
     jQuery(document).ready(function($) {
+        var recipeInstructionOptionsUrlTemplate = {!! json_encode(url(config('backpack.base.route_prefix', 'admin') . '/Ingredientes/__ID__/instrucciones')) !!};
         var ingrediente = $("[name='ingrediente']");
 				var medida = $("[name='medida']");
 				var instruccion = $("[name='instruccion']");
@@ -248,6 +249,7 @@
 
               if(!obj){
                 alert('Ocurrió un error y puede que la información no se haya modificado');
+                return;
               }
               //convertir inputs y selector en td
               $(this).parents('tr').find('td.columnas-editables').each(function() {
@@ -352,7 +354,7 @@
               // console.log(medida_id, medida_nombre);
               //Ajax call
               $.ajax({
-                  url: "/api/ingrediente/instruccion/" + ingrediente_id,
+                  url: recipeInstructionOptionsUrlTemplate.replace('__ID__', ingrediente_id),
                   type: 'GET',
                   dataType: 'json',
                   success: function(data) {
@@ -393,11 +395,15 @@
                        /// console.log(result);
                         $.each(result, function (i, item) {
                        // console.log(item);
+                          if(!item || typeof item.id === 'undefined') {
+                            return;
+                          }
+
                           if(medida_id && item.id == medida_id){
-                            medidas += "<option value='" + result[i].id + "' selected> " + result[i].nombre + "</option>";
+                            medidas += "<option value='" + item.id + "' selected> " + item.nombre + "</option>";
                           }
                           else{
-                            medidas += "<option value='" + result[i].id + "'> " + result[i].nombre + "</option>";
+                            medidas += "<option value='" + item.id + "'> " + item.nombre + "</option>";
                           }
                         });
                         var select = $('<select class="modo-edicion" style="width: 100%;">' +  medidas  +'</select>');
