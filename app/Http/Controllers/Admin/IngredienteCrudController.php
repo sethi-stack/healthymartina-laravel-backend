@@ -15,6 +15,7 @@ use App\Http\Requests\IngredienteRequest as UpdateRequest;
 use App\Models\Ingrediente;
 use App\Models\Instruccion;
 use App\Models\Medida;
+use Illuminate\Support\Str;
 
 /**
  * Class IngredienteCrudController
@@ -23,6 +24,11 @@ use App\Models\Medida;
  */
 class IngredienteCrudController extends CrudController
 {
+    private const ENABLE_FDC_SIN_CONVERSION_AUTOFILL = false;
+    private const LEGACY_SIN_CONVERSION_MEDIDA_ID = 7;
+    private const LEGACY_SIN_CONVERSION_CANTIDAD = 1.0;
+    private const LEGACY_SIN_CONVERSION_EQUIVALENCIA_GRAMOS = 1.0;
+
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -142,6 +148,16 @@ class IngredienteCrudController extends CrudController
             'type'  => 'ingrediente_fdc_search',
             'label' => 'FDC Search',
             'wrapperAttributes' => ['class' => 'form-group col-md-12'],
+        ]);
+
+        CRUD::addField([
+            'name' => 'fdc_raw',
+            'type' => 'hidden',
+        ]);
+
+        CRUD::addField([
+            'name' => 'fdc_name',
+            'type' => 'hidden',
         ]);
 
         CRUD::addField([
@@ -298,12 +314,29 @@ class IngredienteCrudController extends CrudController
 
     private function createInstruccionRow(int $ingredienteId, array $row): void
     {
-        $nota = (string) ($row['nota_preparacion'] ?? '');
+        $nota = trim((string) ($row['nota_preparacion'] ?? ''));
         $sinConversion = (int) ($row['sin_conversion'] ?? 0);
-        $cantidad = is_numeric($row['cantidad'] ?? null) ? (float) $row['cantidad'] : 0.0;
+        $cantidad = is_numeric($row['cantidad'] ?? null) ? (float) $row['cantidad'] : null;
         $equivalenciaGramos = is_numeric($row['equivalencia_gramos'] ?? null) ? (float) $row['equivalencia_gramos'] : null;
         $medidaId = (int) ($row['medida_id'] ?? 0) ?: null;
         $equivalenciaMedidaId = (int) ($row['equivalencia_medida_id'] ?? 0) ?: null;
+
+        if (self::ENABLE_FDC_SIN_CONVERSION_AUTOFILL && $sinConversion === 1) {
+            $fdcDefaults = $this->deriveInstructionDefaultsFromFdc($ingredienteId);
+            if ($fdcDefaults) {
+                $nota = $nota !== '' ? $nota : ($fdcDefaults['nota_preparacion'] ?? 'NA');
+                $cantidad = $cantidad ?? ($fdcDefaults['cantidad'] ?? null);
+                $equivalenciaGramos = $equivalenciaGramos ?? ($fdcDefaults['equivalencia_gramos'] ?? null);
+                $medidaId = $medidaId ?: ($fdcDefaults['medida_id'] ?? null);
+            }
+        } elseif ($sinConversion === 1) {
+            $cantidad = self::LEGACY_SIN_CONVERSION_CANTIDAD;
+            $equivalenciaGramos = self::LEGACY_SIN_CONVERSION_EQUIVALENCIA_GRAMOS;
+            $medidaId = self::LEGACY_SIN_CONVERSION_MEDIDA_ID;
+        }
+
+        $cantidad = $cantidad ?? 0.0;
+        $nota = $nota !== '' ? $nota : 'NA';
 
         // Try a few known schema variants (no information_schema access needed).
         $variants = [
@@ -359,6 +392,149 @@ class IngredienteCrudController extends CrudController
         if ($lastException) {
             throw $lastException;
         }
+    }
+
+    private function deriveInstructionDefaultsFromFdc(int $ingredienteId): ?array
+    {
+        $ingrediente = Ingrediente::find($ingredienteId);
+        if (!$ingrediente || empty($ingrediente->fdc_raw)) {
+            return null;
+        }
+
+        $fdc = json_decode((string) $ingrediente->fdc_raw, true);
+        if (!is_array($fdc)) {
+            return null;
+        }
+
+        $quantity = null;
+        $unit = null;
+        $equivalence = null;
+
+        $servingSize = isset($fdc['servingSize']) && is_numeric($fdc['servingSize'])
+            ? (float) $fdc['servingSize']
+            : null;
+        $servingUnit = trim((string) ($fdc['servingSizeUnit'] ?? ''));
+
+        if ($servingSize && $servingUnit !== '') {
+            $quantity = $servingSize;
+            $unit = $servingUnit;
+            $equivalence = $this->resolveEquivalentWeightFromUnit($servingSize, $servingUnit);
+        }
+
+        if ((!$quantity || !$unit) && !empty($fdc['foodPortions']) && is_array($fdc['foodPortions'])) {
+            foreach ($fdc['foodPortions'] as $portion) {
+                $portionAmount = isset($portion['amount']) && is_numeric($portion['amount'])
+                    ? (float) $portion['amount']
+                    : null;
+                $portionUnit = trim((string) ($portion['measureUnit']['abbreviation'] ?? $portion['measureUnit']['name'] ?? ''));
+                $portionGramWeight = isset($portion['gramWeight']) && is_numeric($portion['gramWeight'])
+                    ? (float) $portion['gramWeight']
+                    : null;
+
+                if ($portionAmount && $portionUnit !== '') {
+                    $quantity = $portionAmount;
+                    $unit = $portionUnit;
+                    $equivalence = $portionGramWeight;
+                    break;
+                }
+
+                if (!$quantity && $portionGramWeight) {
+                    $quantity = $portionGramWeight;
+                    $unit = 'g';
+                    $equivalence = $portionGramWeight;
+                    break;
+                }
+            }
+        }
+
+        if (!$quantity) {
+            return null;
+        }
+
+        if (!$unit) {
+            $unit = 'g';
+        }
+
+        if ($equivalence === null) {
+            $equivalence = $this->resolveEquivalentWeightFromUnit($quantity, $unit);
+        }
+
+        return [
+            'nota_preparacion' => 'NA',
+            'cantidad' => $quantity,
+            'medida_id' => $this->resolveMedidaIdFromUnit($unit),
+            'equivalencia_gramos' => $equivalence,
+        ];
+    }
+
+    private function resolveEquivalentWeightFromUnit(float $quantity, string $unit): ?float
+    {
+        $normalizedUnit = $this->normalizeUnitLabel($unit);
+        if (in_array($normalizedUnit, ['g', 'gram', 'grams', 'gr', 'gramo', 'gramos', 'gm'], true)) {
+            return $quantity;
+        }
+
+        if (in_array($normalizedUnit, ['ml', 'milliliter', 'milliliters', 'mililitro', 'mililitros'], true)) {
+            return $quantity;
+        }
+
+        return null;
+    }
+
+    private function resolveMedidaIdFromUnit(?string $unit): ?int
+    {
+        $unit = $this->normalizeUnitLabel((string) $unit);
+        if ($unit === '') {
+            return null;
+        }
+
+        $aliases = [
+            'g' => ['g', 'gr', 'gm', 'gram', 'grams', 'gramo', 'gramos'],
+            'ml' => ['ml', 'milliliter', 'milliliters', 'mililitro', 'mililitros'],
+            'kg' => ['kg', 'kilogram', 'kilograms', 'kilo', 'kilos', 'kilogramo', 'kilogramos'],
+            'oz' => ['oz', 'ounce', 'ounces', 'onza', 'onzas'],
+            'lb' => ['lb', 'lbs', 'pound', 'pounds', 'libra', 'libras'],
+            'tz' => ['cup', 'cups', 'taza', 'tazas', 'tz'],
+            'cda' => ['tbsp', 'tablespoon', 'tablespoons', 'cda', 'cdas', 'cucharada', 'cucharadas'],
+            'cdta' => ['tsp', 'teaspoon', 'teaspoons', 'cdta', 'cdtas', 'cucharadita', 'cucharaditas'],
+            'pieza' => ['pieza', 'piezas', 'piece', 'pieces', 'unidad', 'unidades', 'unit', 'units'],
+        ];
+
+        $wantedAliases = [$unit];
+        foreach ($aliases as $group) {
+            if (in_array($unit, $group, true)) {
+                $wantedAliases = $group;
+                break;
+            }
+        }
+
+        $medidas = Medida::all();
+        foreach ($medidas as $medida) {
+            $candidates = [
+                $medida->nombre ?? '',
+                $medida->abreviatura ?? '',
+                $medida->abreviatura_plural ?? '',
+                $medida->nombre_english ?? '',
+            ];
+
+            foreach ($candidates as $candidate) {
+                $normalizedCandidate = $this->normalizeUnitLabel((string) $candidate);
+                if ($normalizedCandidate !== '' && in_array($normalizedCandidate, $wantedAliases, true)) {
+                    return (int) $medida->id;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeUnitLabel(string $value): string
+    {
+        return Str::of($value)
+            ->lower()
+            ->ascii()
+            ->replaceMatches('/[^a-z0-9]+/', '')
+            ->toString();
     }
 
     /**

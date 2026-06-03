@@ -12,6 +12,22 @@
   jQuery(function($) {
     var $select = $('#fdc-food-search');
     var $usdaInput = $('input[name="usda"]').first();
+    var $fdcRawInput = $('input[name="fdc_raw"]').first();
+    var $fdcNameInput = $('input[name="fdc_name"]').first();
+
+    function applyFdcFood(food) {
+      if (!food) return;
+
+      if ($fdcRawInput.length) {
+        $fdcRawInput.val(JSON.stringify(food)).trigger('change');
+      }
+
+      if ($fdcNameInput.length) {
+        $fdcNameInput.val(food.description || '').trigger('change');
+      }
+
+      $(document).trigger('hm:fdc-food-selected', [food]);
+    }
 
     $select.select2({
       theme: "bootstrap",
@@ -39,7 +55,23 @@
       var selected = $select.select2('data')[0];
       if (!selected || !selected.id) return;
       $usdaInput.val(selected.id).trigger('change');
+
+       $.getJSON({!! json_encode(url(config('backpack.base.route_prefix', 'admin').'/getFDCFood')) !!}, {
+        fdcId: selected.id
+      }).done(function(food) {
+        applyFdcFood(food);
+      }).fail(function(xhr) {
+        console.warn('FDC detail lookup failed', xhr);
+      });
     });
+
+    if ($fdcRawInput.length && $fdcRawInput.val()) {
+      try {
+        applyFdcFood(JSON.parse($fdcRawInput.val()));
+      } catch (e) {
+        console.warn('Invalid existing FDC payload', e);
+      }
+    }
   });
 </script>
 @endpush
