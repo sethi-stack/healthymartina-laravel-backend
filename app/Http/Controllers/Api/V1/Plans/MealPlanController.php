@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\V1\Plans;
 use App\Http\Controllers\Controller;
 use App\Models\Calendar;
 use App\Models\Plan;
+use App\Models\Receta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MealPlanController extends Controller
 {
+    private const PLAN_TYPE_INVISIBLE = 1;
+
     /**
      * List available meal plans.
      */
@@ -22,6 +25,7 @@ class MealPlanController extends Controller
         // - shared plans (tipo_id = 4)
         // - plans targeted to user's role
         $plans = Plan::whereNull('deleted_at')
+            ->where('tipo_id', '!=', self::PLAN_TYPE_INVISIBLE)
             ->whereIn('tipo_id', [4, $user->role_id])
             ->get();
 
@@ -37,28 +41,30 @@ class MealPlanController extends Controller
     {
         $user = Auth::user();
 
-        $plan = Plan::with([
-                'recetas' => function ($query) {
-                    $query->where('active', 1)
-                        ->withCount('recetaInstruccionReceta')
-                        ->orderBy('titulo');
-                },
-            ])
+        $plan = Plan::with('plan_receta')
             ->where('id', $id)
+            ->where('tipo_id', '!=', self::PLAN_TYPE_INVISIBLE)
             ->whereIn('tipo_id', [4, $user->role_id])
             ->firstOrFail();
 
         $calendar = $plan->plan_receta;
-        $recipes = $plan->recetas->map(function ($recipe) {
-            return [
-                'id' => $recipe->id,
-                'slug' => $recipe->slug,
-                'titulo' => $recipe->titulo,
-                'tiempo' => $recipe->tiempo,
-                'imagen_principal' => $recipe->imagen_principal,
-                'ingredientes_count' => $recipe->receta_instruccion_receta_count,
-            ];
-        })->values();
+        $recipeIds = $this->extractRecipeIdsFromCalendar($calendar);
+
+        $recipes = Receta::whereIn('id', $recipeIds)
+            ->where('active', 1)
+            ->withCount('recetaInstruccionReceta')
+            ->orderBy('titulo')
+            ->get()
+            ->map(function ($recipe) {
+                return [
+                    'id' => $recipe->id,
+                    'slug' => $recipe->slug,
+                    'titulo' => $recipe->titulo,
+                    'tiempo' => $recipe->tiempo,
+                    'imagen_principal' => $recipe->imagen_principal,
+                    'ingredientes_count' => $recipe->receta_instruccion_receta_count,
+                ];
+            })->values();
 
         return response()->json([
             'plan' => $plan,
@@ -80,6 +86,7 @@ class MealPlanController extends Controller
         ]);
 
         $plan = Plan::where('id', $id)
+            ->where('tipo_id', '!=', self::PLAN_TYPE_INVISIBLE)
             ->whereIn('tipo_id', [4, $user->role_id])
             ->firstOrFail();
 
@@ -230,5 +237,37 @@ class MealPlanController extends Controller
         }
 
         return [$mServings, $sServings];
+    }
+
+    private function extractRecipeIdsFromCalendar($calendar): array
+    {
+        if (!$calendar) {
+            return [];
+        }
+
+        $recipeIds = [];
+
+        foreach (['main_schedule', 'sides_schedule'] as $field) {
+            $schedule = json_decode($calendar->{$field} ?? '[]', true);
+
+            if (!is_array($schedule)) {
+                continue;
+            }
+
+            foreach ($schedule as $dayMeals) {
+                if (!is_array($dayMeals)) {
+                    continue;
+                }
+
+                foreach ($dayMeals as $recipeId) {
+                    $normalizedId = (int) $recipeId;
+                    if ($normalizedId > 0) {
+                        $recipeIds[] = $normalizedId;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($recipeIds));
     }
 }

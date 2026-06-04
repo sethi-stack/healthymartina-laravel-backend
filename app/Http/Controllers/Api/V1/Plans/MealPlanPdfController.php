@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class MealPlanPdfController extends Controller
 {
+    private const PLAN_TYPE_INVISIBLE = 1;
+
     /**
      * Download meal plan as PDF.
      */
@@ -18,6 +20,7 @@ class MealPlanPdfController extends Controller
         $user = Auth::user();
 
         $plan = Plan::where('id', $id)
+            ->where('tipo_id', '!=', self::PLAN_TYPE_INVISIBLE)
             ->whereIn('tipo_id', [4, $user->role_id])
             ->firstOrFail();
 
@@ -39,5 +42,4 @@ class MealPlanPdfController extends Controller
         return $pdf->download($plan->nombre . '.pdf');
     }
 }
-
 

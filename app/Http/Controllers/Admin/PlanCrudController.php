@@ -18,6 +18,9 @@ use App\Http\Requests\PlanRequest as UpdateRequest;
  */
 class PlanCrudController extends CrudController
 {
+    private const PLAN_TYPE_INVISIBLE = 1;
+    private const PLAN_TYPE_VISIBLE = 4;
+
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
@@ -60,21 +63,51 @@ class PlanCrudController extends CrudController
         CRUD::removeField('best');
         CRUD::removeField('slug');
         CRUD::removeField('tipo_id');
+        CRUD::removeField('guia');
+        CRUD::removeField('editado');
+        CRUD::removeField('manual');
+        CRUD::removeField('introduccion');
+        CRUD::removeField('icono');
+        CRUD::removeField('descripcion_recipes');
+        CRUD::removeField('recetas');
+        CRUD::removeField('svg');
+        CRUD::removeField('duracion');
+        CRUD::removeField('descripcion');
+
+        CRUD::addField([
+            'name' => 'invisible_display',
+            'label' => 'Invisible',
+            'type' => 'checkbox',
+            'default' => $this->isInvisibleEntry() ? 1 : 0,
+            'value' => $this->isInvisibleEntry() ? 1 : 0,
+            'wrapperAttributes' => [
+                'class' => 'form-group col-md-4',
+            ],
+        ]);
 
         CRUD::addField([
             'name' => 'tipo_id',
             'type' => 'hidden',
-            'value' => 4,
+            'value' => $this->isInvisibleEntry() ? self::PLAN_TYPE_INVISIBLE : self::PLAN_TYPE_VISIBLE,
         ]);
 
         CRUD::addField([
-            'name' => 'recetas',
-            'label' => 'Recetas',
-            'type' => 'select2_multiple',
-            'entity' => 'recetas',
-            'attribute' => 'titulo',
-            'model' => \App\Models\Receta::class,
-            'pivot' => true,
+            'name' => 'duracion',
+            'label' => 'Dias',
+            'type' => 'number',
+            'attributes' => [
+                'min' => 1,
+                'step' => 1,
+            ],
+            'wrapperAttributes' => [
+                'class' => 'form-group col-md-4',
+            ],
+        ]);
+
+        CRUD::addField([
+            'name' => 'descripcion',
+            'label' => 'Descripción',
+            'type' => 'summernote',
         ]);
 
         $recipes = Receta::where('active', 1)
@@ -108,9 +141,9 @@ class PlanCrudController extends CrudController
     {
         $this->crud->hasAccessOrFail('create');
         $request = $this->crud->validateRequest();
-        if (!$request->filled('tipo_id')) {
-            $request->request->set('tipo_id', 4);
-        }
+        $request->request->set('tipo_id', $request->boolean('invisible_display')
+            ? self::PLAN_TYPE_INVISIBLE
+            : self::PLAN_TYPE_VISIBLE);
         if (!$request->filled('svg')) {
             $request->request->set('svg', '');
         }
@@ -123,6 +156,7 @@ class PlanCrudController extends CrudController
         $this->crud->registerFieldEvents();
         $item = $this->crud->create($this->crud->getStrippedSaveRequest($request));
         $this->persistPlanReceta($item->id, $payload);
+        $item->recetas()->sync($this->extractRecipeIdsFromPayload($payload));
 
         \Alert::success(trans('backpack::crud.insert_success'))->flash();
         $this->crud->setSaveAction();
@@ -133,9 +167,9 @@ class PlanCrudController extends CrudController
     {
         $this->crud->hasAccessOrFail('update');
         $request = $this->crud->validateRequest();
-        if (!$request->filled('tipo_id')) {
-            $request->request->set('tipo_id', 4);
-        }
+        $request->request->set('tipo_id', $request->boolean('invisible_display')
+            ? self::PLAN_TYPE_INVISIBLE
+            : self::PLAN_TYPE_VISIBLE);
         if (!$request->filled('svg')) {
             $request->request->set('svg', '');
         }
@@ -150,6 +184,7 @@ class PlanCrudController extends CrudController
         $this->crud->registerFieldEvents();
         $item = $this->crud->update($id, $this->crud->getStrippedSaveRequest($request));
         $this->persistPlanReceta($id, $payload);
+        $item->recetas()->sync($this->extractRecipeIdsFromPayload($payload));
 
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         $this->crud->setSaveAction();
@@ -207,5 +242,40 @@ class PlanCrudController extends CrudController
                 'labels' => json_encode($labels),
             ]
         );
+    }
+
+    private function isInvisibleEntry(): bool
+    {
+        $entry = $this->crud->getCurrentEntry();
+
+        return $entry && (int) $entry->tipo_id === self::PLAN_TYPE_INVISIBLE;
+    }
+
+    private function extractRecipeIdsFromPayload(array $payload): array
+    {
+        $recipeIds = [];
+
+        foreach (['main_schedule', 'sides_schedule'] as $scheduleKey) {
+            $schedule = $payload[$scheduleKey] ?? [];
+
+            if (!is_array($schedule)) {
+                continue;
+            }
+
+            foreach ($schedule as $dayMeals) {
+                if (!is_array($dayMeals)) {
+                    continue;
+                }
+
+                foreach ($dayMeals as $recipeId) {
+                    $normalizedId = (int) $recipeId;
+                    if ($normalizedId > 0) {
+                        $recipeIds[] = $normalizedId;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($recipeIds));
     }
 }
