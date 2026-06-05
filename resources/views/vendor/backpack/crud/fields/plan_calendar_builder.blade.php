@@ -51,7 +51,13 @@
                     </ul>
                     <div class="form-group">
                         <label>Receta</label>
-                        <select class="form-control" id="planMealRecipeSelect"></select>
+                        <input type="text" class="form-control" id="planMealRecipeSearch" placeholder="Buscar receta..." autocomplete="off" />
+                        <input type="hidden" id="planMealRecipeSelect" />
+                        <div id="planMealRecipeResults" class="plan-meal-search-results"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Días</label>
+                        <div id="planMealDaysSelector" class="plan-meal-days"></div>
                     </div>
                     <div class="form-group">
                         <label>Porciones</label>
@@ -73,6 +79,8 @@
 @include('crud::fields.inc.wrapper_end')
 
 @push('crud_fields_styles')
+@basset('https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css')
+@basset('https://cdn.jsdelivr.net/npm/select2-bootstrap-theme@0.1.0-beta.10/dist/select2-bootstrap.min.css')
 <style>
     /* Ensure custom planner modal is above backdrop in Backpack admin layout */
     #planMealModal {
@@ -105,6 +113,44 @@
         font-weight: 600;
         font-size: 12px;
     }
+    .plan-meal-days {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+    }
+    .plan-meal-days__option {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-weight: 400;
+    }
+    .plan-meal-search-results {
+        margin-top: 8px;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        background: #fff;
+        max-height: 240px;
+        overflow-y: auto;
+        display: none;
+    }
+    .plan-meal-search-results.is-open {
+        display: block;
+    }
+    .plan-meal-search-result {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f5;
+        font-size: 14px;
+        line-height: 1.35;
+    }
+    .plan-meal-search-result:last-child {
+        border-bottom: 0;
+    }
+    .plan-meal-search-result:hover,
+    .plan-meal-search-result.is-selected {
+        background: #f8f9fa;
+    }
 </style>
 @endpush
 
@@ -122,8 +168,12 @@
         const recipes = JSON.parse(root.dataset.recipes || '[]');
         const days = JSON.parse(root.dataset.days || '{}');
         const meals = JSON.parse(root.dataset.meals || '{}');
-        const recipeMap = recipes.reduce((acc, item) => {
-            acc[String(item.id)] = item.title;
+        const normalizedRecipes = recipes.map((item) => ({
+            id: Number(item.id),
+            text: item.title || item.titulo || item.name || `Receta #${item.id}`,
+        }));
+        const recipeMap = normalizedRecipes.reduce((acc, item) => {
+            acc[String(item.id)] = item.text;
             return acc;
         }, {});
 
@@ -152,23 +202,118 @@
         } catch (_e) {}
 
         const select = document.getElementById('planMealRecipeSelect');
+        const recipeSearch = document.getElementById('planMealRecipeSearch');
+        const recipeResults = document.getElementById('planMealRecipeResults');
+        const daysSelector = document.getElementById('planMealDaysSelector');
         const servingInput = document.getElementById('planMealServingInput');
         const leftoverInput = document.getElementById('planMealLeftoverInput');
         const saveBtn = document.getElementById('planMealSaveBtn');
         const clearBtn = document.getElementById('planMealClearBtn');
         const tabLinks = document.querySelectorAll('#planMealModal [data-mealtype]');
+        let selectedDays = [];
 
         function syncInput() {
             payloadInput.value = JSON.stringify(state);
         }
 
         function buildRecipeSelect() {
-            select.innerHTML = '<option value="">Selecciona receta</option>';
-            recipes.forEach((item) => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.title;
-                select.appendChild(option);
+            renderRecipeResults(normalizedRecipes);
+        }
+
+        function handleRecipeChange() {
+            const recipeId = select.value ? Number(select.value) : null;
+            if (recipeId) {
+                const matchingDays = findMatchingDays(recipeId, context.mealKey, context.mealType);
+                selectedDays = matchingDays.length ? matchingDays : [context.dayKey];
+            } else {
+                selectedDays = [context.dayKey];
+            }
+            renderDaysSelector();
+        }
+
+        function getMealStateKey(baseKey, mealType) {
+            return mealType === 'main' ? `main_${baseKey}` : `sides_${baseKey}`;
+        }
+
+        function findMatchingDays(recipeId, mealKey, mealType) {
+            const scheduleKey = getMealStateKey('schedule', mealType);
+            return Object.keys(days).filter((dayKey) => {
+                return Number(state[scheduleKey]?.[dayKey]?.[mealKey] || 0) === Number(recipeId);
+            });
+        }
+
+        function getRecipeText(recipeId) {
+            return recipeMap[String(recipeId)] || '';
+        }
+
+        function renderRecipeResults(items) {
+            recipeResults.innerHTML = '';
+
+            if (!items.length) {
+                const empty = document.createElement('div');
+                empty.className = 'plan-meal-search-result';
+                empty.textContent = 'No se encontraron recetas';
+                recipeResults.appendChild(empty);
+                recipeResults.classList.add('is-open');
+                return;
+            }
+
+            items.forEach((item) => {
+                const option = document.createElement('div');
+                option.className = 'plan-meal-search-result';
+                if (String(select.value || '') === String(item.id)) {
+                    option.classList.add('is-selected');
+                }
+                option.textContent = item.text;
+                option.addEventListener('click', function () {
+                    select.value = String(item.id);
+                    recipeSearch.value = item.text;
+                    recipeResults.classList.remove('is-open');
+                    handleRecipeChange();
+                });
+                recipeResults.appendChild(option);
+            });
+
+            recipeResults.classList.add('is-open');
+        }
+
+        function filterRecipes(query) {
+            const normalizedQuery = String(query || '').trim().toLowerCase();
+            if (!normalizedQuery) {
+                return normalizedRecipes;
+            }
+
+            return normalizedRecipes.filter((item) =>
+                item.text.toLowerCase().includes(normalizedQuery)
+            );
+        }
+
+        function renderDaysSelector() {
+            daysSelector.innerHTML = '';
+            Object.entries(days).forEach(([dayKey, dayLabel]) => {
+                const label = document.createElement('label');
+                label.className = 'plan-meal-days__option';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = dayKey;
+                checkbox.checked = selectedDays.includes(dayKey);
+                checkbox.addEventListener('change', function () {
+                    if (checkbox.checked) {
+                        if (!selectedDays.includes(dayKey)) {
+                            selectedDays = [...selectedDays, dayKey];
+                        }
+                    } else {
+                        selectedDays = selectedDays.filter((value) => value !== dayKey);
+                    }
+                });
+
+                const span = document.createElement('span');
+                span.textContent = dayLabel;
+
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                daysSelector.appendChild(label);
             });
         }
 
@@ -241,13 +386,21 @@
 
         function hydrateModal() {
             const { dayKey, mealKey, mealType } = context;
-            const scheduleKey = mealType === 'main' ? 'main_schedule' : 'sides_schedule';
-            const servingsKey = mealType === 'main' ? 'main_servings' : 'sides_servings';
-            const leftoversKey = mealType === 'main' ? 'main_leftovers' : 'sides_leftovers';
+            const scheduleKey = getMealStateKey('schedule', mealType);
+            const servingsKey = getMealStateKey('servings', mealType);
+            const leftoversKey = getMealStateKey('leftovers', mealType);
 
-            select.value = state[scheduleKey]?.[dayKey]?.[mealKey] || '';
+            const recipeId = state[scheduleKey]?.[dayKey]?.[mealKey] || '';
+            select.value = recipeId;
+            recipeSearch.value = recipeId ? getRecipeText(recipeId) : '';
+            recipeResults.classList.remove('is-open');
             servingInput.value = state[servingsKey]?.[dayKey]?.[mealKey] || 1;
             leftoverInput.checked = Boolean(state[leftoversKey]?.[dayKey]?.[mealKey]);
+            selectedDays = recipeId ? findMatchingDays(recipeId, mealKey, mealType) : [dayKey];
+            if (!selectedDays.length) {
+                selectedDays = [dayKey];
+            }
+            renderDaysSelector();
         }
 
         tabLinks.forEach((link) => {
@@ -260,14 +413,38 @@
 
         saveBtn.addEventListener('click', function () {
             const { dayKey, mealKey, mealType } = context;
-            const scheduleKey = mealType === 'main' ? 'main_schedule' : 'sides_schedule';
-            const servingsKey = mealType === 'main' ? 'main_servings' : 'sides_servings';
-            const leftoversKey = mealType === 'main' ? 'main_leftovers' : 'sides_leftovers';
+            const scheduleKey = getMealStateKey('schedule', mealType);
+            const servingsKey = getMealStateKey('servings', mealType);
+            const leftoversKey = getMealStateKey('leftovers', mealType);
 
             const recipeId = select.value ? Number(select.value) : null;
-            state[scheduleKey][dayKey][mealKey] = recipeId;
-            state[servingsKey][dayKey][mealKey] = recipeId ? Number(servingInput.value || 1) : null;
-            state[leftoversKey][dayKey][mealKey] = recipeId ? Boolean(leftoverInput.checked) : null;
+            const targetDays = selectedDays.length ? selectedDays : [dayKey];
+            const allDays = Object.keys(days);
+
+            if (recipeId) {
+                targetDays.forEach((selectedDayKey) => {
+                    state[scheduleKey][selectedDayKey][mealKey] = recipeId;
+                    state[servingsKey][selectedDayKey][mealKey] = Number(servingInput.value || 1);
+                    state[leftoversKey][selectedDayKey][mealKey] = Boolean(leftoverInput.checked);
+                });
+            } else {
+                state[scheduleKey][dayKey][mealKey] = null;
+                state[servingsKey][dayKey][mealKey] = null;
+                state[leftoversKey][dayKey][mealKey] = null;
+            }
+
+            if (recipeId) {
+                allDays.forEach((existingDayKey) => {
+                    if (targetDays.includes(existingDayKey)) {
+                        return;
+                    }
+                    if (Number(state[scheduleKey]?.[existingDayKey]?.[mealKey] || 0) === recipeId) {
+                        state[scheduleKey][existingDayKey][mealKey] = null;
+                        state[servingsKey][existingDayKey][mealKey] = null;
+                        state[leftoversKey][existingDayKey][mealKey] = null;
+                    }
+                });
+            }
 
             renderTable();
             window.jQuery('#planMealModal').modal('hide');
@@ -275,8 +452,29 @@
 
         clearBtn.addEventListener('click', function () {
             select.value = '';
+            recipeSearch.value = '';
             servingInput.value = 1;
             leftoverInput.checked = false;
+            selectedDays = [context.dayKey];
+            renderDaysSelector();
+            renderRecipeResults(normalizedRecipes);
+        });
+
+        recipeSearch.addEventListener('focus', function () {
+            renderRecipeResults(filterRecipes(recipeSearch.value));
+        });
+
+        recipeSearch.addEventListener('input', function () {
+            select.value = '';
+            renderRecipeResults(filterRecipes(recipeSearch.value));
+        });
+
+        document.addEventListener('click', function (event) {
+            const withinSearch = recipeSearch.contains(event.target) || recipeResults.contains(event.target);
+            const withinModal = modalEl && modalEl.contains(event.target);
+            if (!withinSearch && !withinModal) {
+                recipeResults.classList.remove('is-open');
+            }
         });
 
         buildRecipeSelect();

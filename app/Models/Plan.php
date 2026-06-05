@@ -143,4 +143,36 @@ class Plan extends Model
         $this->uploadFileToDisk($value, $attribute_name, $disk, $destination_path);
         return $this->attributes['guia'] ?? null;
     }
+
+    public function setDescripcionAttribute($value)
+    {
+        if (!is_string($value) || $value === '') {
+            $this->attributes['descripcion'] = $value;
+            return;
+        }
+
+        $disk = 'spaces';
+        $destination_path = 'planes/descripcion';
+
+        $processed = preg_replace_callback(
+            '/src=(["\'])(data:image\/[^"\']+)\1/i',
+            function ($matches) use ($disk, $destination_path) {
+                $dataUrl = $matches[2] ?? '';
+                if ($dataUrl === '') {
+                    return $matches[0];
+                }
+
+                $jpegBinary = Base64Image::toJpegBinary($dataUrl, 90);
+                $filename = md5($dataUrl . time() . uniqid('', true)) . '.jpg';
+                $storedPath = $destination_path . '/' . $filename;
+
+                \Storage::disk($disk)->put($storedPath, $jpegBinary);
+
+                return 'src="' . e(\Storage::disk($disk)->url($storedPath)) . '"';
+            },
+            $value
+        );
+
+        $this->attributes['descripcion'] = $processed ?? $value;
+    }
 }

@@ -92,6 +92,36 @@ class PlanCrudController extends CrudController
         ]);
 
         CRUD::addField([
+            'name' => 'introduccion',
+            'type' => 'hidden',
+            'value' => '',
+        ]);
+
+        CRUD::addField([
+            'name' => 'descripcion_recipes',
+            'type' => 'hidden',
+            'value' => '',
+        ]);
+
+        CRUD::addField([
+            'name' => 'svg',
+            'type' => 'hidden',
+            'value' => '',
+        ]);
+
+        CRUD::addField([
+            'name' => 'editado',
+            'type' => 'hidden',
+            'value' => 0,
+        ]);
+
+        CRUD::addField([
+            'name' => 'manual',
+            'type' => 'hidden',
+            'value' => 0,
+        ]);
+
+        CRUD::addField([
             'name' => 'duracion',
             'label' => 'Dias',
             'type' => 'number',
@@ -144,12 +174,7 @@ class PlanCrudController extends CrudController
         $request->request->set('tipo_id', $request->boolean('invisible_display')
             ? self::PLAN_TYPE_INVISIBLE
             : self::PLAN_TYPE_VISIBLE);
-        if (!$request->filled('svg')) {
-            $request->request->set('svg', '');
-        }
-        if (!$request->filled('descripcion_recipes')) {
-            $request->request->set('descripcion_recipes', '');
-        }
+        $this->applyLegacyFieldDefaults($request);
         $payload = $this->parsePlanRecetaPayload($request->get('plan_receta_payload'));
         $request->request->remove('plan_receta_payload');
 
@@ -170,12 +195,7 @@ class PlanCrudController extends CrudController
         $request->request->set('tipo_id', $request->boolean('invisible_display')
             ? self::PLAN_TYPE_INVISIBLE
             : self::PLAN_TYPE_VISIBLE);
-        if (!$request->filled('svg')) {
-            $request->request->set('svg', '');
-        }
-        if (!$request->filled('descripcion_recipes')) {
-            $request->request->set('descripcion_recipes', '');
-        }
+        $this->applyLegacyFieldDefaults($request);
 
         $id = $request->get($this->crud->model->getKeyName());
         $payload = $this->parsePlanRecetaPayload($request->get('plan_receta_payload'));
@@ -189,6 +209,29 @@ class PlanCrudController extends CrudController
         \Alert::success(trans('backpack::crud.update_success'))->flash();
         $this->crud->setSaveAction();
         return $this->crud->performSaveAction($item->getKey());
+    }
+
+    private function applyLegacyFieldDefaults($request): void
+    {
+        if (!$request->filled('svg')) {
+            $request->request->set('svg', '');
+        }
+
+        if (!$request->filled('descripcion_recipes')) {
+            $request->request->set('descripcion_recipes', '');
+        }
+
+        if (!$request->filled('introduccion')) {
+            $request->request->set('introduccion', '');
+        }
+
+        if (!$request->filled('editado')) {
+            $request->request->set('editado', 0);
+        }
+
+        if (!$request->filled('manual')) {
+            $request->request->set('manual', 0);
+        }
     }
 
     private function parsePlanRecetaPayload($rawPayload): array
