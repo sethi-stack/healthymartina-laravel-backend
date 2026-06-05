@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Recipes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Receta;
+use App\Support\NutritionPreferenceSupport;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,21 @@ use Illuminate\Support\Facades\Storage;
 
 class PdfController extends Controller
 {
+    private function getUserNutritionalsInfo($user): array
+    {
+        $nutritionals = DB::table('nutritional_preferences')
+            ->where('user_id', $user->id)
+            ->first();
+
+        $storedNutritionInfo = !empty($nutritionals->nutritional_info)
+            ? json_decode($nutritionals->nutritional_info, true)
+            : null;
+
+        return array_map(function ($item) {
+            return (object) $item;
+        }, array_values(NutritionPreferenceSupport::normalizeNutritionInfo($storedNutritionInfo)));
+    }
+
     private function buildRecipePdf(Receta $recipe, $nutritionalsInfo, $user)
     {
         $recipeImageSrc = $recipe->imagen_principal;
@@ -54,14 +70,7 @@ class PdfController extends Controller
     {
         $recipe = Receta::findOrFail($recipeId);
         $user = Auth::user();
-        
-        $nutritionals = DB::table('nutritional_preferences')
-            ->where('user_id', $user->id)
-            ->first();
-
-        $nutritionals_info = $nutritionals
-            ? json_decode($nutritionals->nutritional_info)
-            : config()->get('constants.nutritients');
+        $nutritionals_info = $this->getUserNutritionalsInfo($user);
 
         $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user);
 
@@ -90,13 +99,7 @@ class PdfController extends Controller
             ], 422);
         }
 
-        $nutritionals = DB::table('nutritional_preferences')
-            ->where('user_id', $user->id)
-            ->first();
-
-        $nutritionals_info = $nutritionals
-            ? json_decode($nutritionals->nutritional_info)
-            : config()->get('constants.nutritients');
+        $nutritionals_info = $this->getUserNutritionalsInfo($user);
 
         $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user);
 

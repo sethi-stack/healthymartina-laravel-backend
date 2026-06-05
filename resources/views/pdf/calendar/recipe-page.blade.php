@@ -58,6 +58,13 @@
       : ($recipe->getPorciones()['nombre'] ?? 'Porción');
     $ingredients = $ingredients ?? $recipe->getIngredientes();
     $nutrition = $nutrition ?? [];
+    $nutritionalsInfo = json_decode(json_encode($nutritionals_info ?? []), false);
+    $nutritionFilterInfo = [];
+    foreach ($nutritionalsInfo as $item) {
+      if (($item->mostrar ?? 0) == 1) {
+        $nutritionFilterInfo[] = $item->id;
+      }
+    }
     $instructions = method_exists($recipe, 'getInstrucciones') ? $recipe->getInstrucciones() : [];
   @endphp
   <style>
@@ -259,7 +266,15 @@
           </div>
         @endif
 
-        @if(!empty($nutrition['info']))
+        @php
+          $filteredNutritionInfo = [];
+          foreach (($nutrition['info'] ?? []) as $nutrient) {
+            if (!empty($nutrient['mostrar']) && in_array($nutrient['id'] ?? null, $nutritionFilterInfo)) {
+              $filteredNutritionInfo[] = $nutrient;
+            }
+          }
+        @endphp
+        @if(!empty($filteredNutritionInfo))
           <div class="section">
             <div class="section-title">Información nutricional</div>
             <table class="nutrition-table">
@@ -270,16 +285,14 @@
                 </tr>
               </thead>
               <tbody>
-                @foreach($nutrition['info'] as $nutrient)
-                  @if(!empty($nutrient['mostrar']))
-                    <tr>
-                      <td>{{ $nutrient['nombre'] ?? 'Nutriente' }}</td>
-                      <td>
-                        {{ isset($nutrient['cantidad']) ? number_format((float) $nutrient['cantidad'], 2, '.', '') : '0.00' }}
-                        {{ $nutrient['unidad_medida'] ?? '' }}
-                      </td>
-                    </tr>
-                  @endif
+                @foreach($filteredNutritionInfo as $nutrient)
+                  <tr>
+                    <td>{{ $nutrient['nombre'] ?? 'Nutriente' }}</td>
+                    <td>
+                      {{ isset($nutrient['cantidad']) ? number_format((float) $nutrient['cantidad'], 2, '.', '') : '0.00' }}
+                      {{ $nutrient['unidad_medida'] ?? '' }}
+                    </td>
+                  </tr>
                 @endforeach
               </tbody>
             </table>

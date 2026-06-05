@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Recipe;
 
+use App\Support\NutritionPreferenceSupport;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
@@ -126,18 +127,11 @@ class RecipeResource extends JsonResource
         if ($nutritionals) {
             $nutritionalsInfo = json_decode($nutritionals->nutritional_info, true);
         } else {
-            $nutritionalsInfo = config('constants.nutritients', []);
+            $nutritionalsInfo = null;
         }
 
-        $filterInfo = [];
-        if (is_array($nutritionalsInfo)) {
-            foreach ($nutritionalsInfo as $nutrient) {
-                if (isset($nutrient['mostrar']) && $nutrient['mostrar'] == 1) {
-                    $filterInfo[] = $nutrient['id'];
-                }
-            }
-        }
+        $normalizedInfo = NutritionPreferenceSupport::normalizeNutritionInfo($nutritionalsInfo);
 
-        return $filterInfo;
+        return NutritionPreferenceSupport::getSelectedIdsFromInfo($normalizedInfo);
     }
 }

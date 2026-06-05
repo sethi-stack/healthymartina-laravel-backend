@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\NotificationPreference;
+use App\Support\NutritionPreferenceSupport;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PreferencesController extends Controller
 {
@@ -17,6 +19,13 @@ class PreferencesController extends Controller
     {
         $user = Auth::user()->load('preference');
         $pref = $user->preference;
+        $nutritionalPreferences = DB::table('nutritional_preferences')
+            ->where('user_id', $user->id)
+            ->first();
+        $storedNutritionInfo = !empty($nutritionalPreferences->nutritional_info)
+            ? json_decode($nutritionalPreferences->nutritional_info, true)
+            : null;
+        $nutritionOptions = NutritionPreferenceSupport::getRecipeNutritionOptions($storedNutritionInfo);
 
         return response()->json([
             'unit_measure' => $user->unit_measure,
@@ -24,6 +33,8 @@ class PreferencesController extends Controller
             'weekly_reminders' => $pref ? (bool) $pref->weekly_reminders : false,
             'new_updates' => $pref ? (bool) $pref->new_updates : false,
             'mentions' => $pref ? (bool) $pref->mentions : false,
+            'nutrition_options' => $nutritionOptions,
+            'nutritions' => NutritionPreferenceSupport::getSelectedIdsFromInfo($nutritionOptions),
         ]);
     }
 
@@ -38,6 +49,8 @@ class PreferencesController extends Controller
             'weekly_reminders' => 'sometimes|boolean',
             'new_updates' => 'sometimes|boolean',
             'mentions' => 'sometimes|boolean',
+            'nutritions' => 'sometimes|array',
+            'nutritions.*' => 'integer',
         ]);
 
         $user = Auth::user();
@@ -57,8 +70,40 @@ class PreferencesController extends Controller
             );
         }
 
+        if ($request->has('nutritions')) {
+            $selectedNutritionIds = array_map('intval', $validated['nutritions'] ?? []);
+            $nutritionalPreferences = DB::table('nutritional_preferences')
+                ->where('user_id', $user->id)
+                ->first();
+            $storedNutritionInfo = !empty($nutritionalPreferences->nutritional_info)
+                ? json_decode($nutritionalPreferences->nutritional_info, true)
+                : null;
+            $nutritionInfo = NutritionPreferenceSupport::normalizeNutritionInfo($storedNutritionInfo);
+
+            foreach ($nutritionInfo as &$item) {
+                $id = (int) ($item['id'] ?? 0);
+                if (in_array($id, NutritionPreferenceSupport::RECIPE_DISPLAY_IDS, true)) {
+                    $item['mostrar'] = in_array($id, $selectedNutritionIds, true) ? 1 : 0;
+                }
+            }
+            unset($item);
+            $nutritionInfo = NutritionPreferenceSupport::markRecipePreferencesCustomized($nutritionInfo);
+
+            DB::table('nutritional_preferences')->updateOrInsert(
+                ['user_id' => $user->id],
+                ['nutritional_info' => json_encode($nutritionInfo)]
+            );
+        }
+
         $user->refresh()->load('preference');
         $pref = $user->preference;
+        $nutritionalPreferences = DB::table('nutritional_preferences')
+            ->where('user_id', $user->id)
+            ->first();
+        $storedNutritionInfo = !empty($nutritionalPreferences->nutritional_info)
+            ? json_decode($nutritionalPreferences->nutritional_info, true)
+            : null;
+        $nutritionOptions = NutritionPreferenceSupport::getRecipeNutritionOptions($storedNutritionInfo);
 
         return response()->json([
             'unit_measure' => $user->unit_measure,
@@ -66,6 +111,8 @@ class PreferencesController extends Controller
             'weekly_reminders' => $pref ? (bool) $pref->weekly_reminders : false,
             'new_updates' => $pref ? (bool) $pref->new_updates : false,
             'mentions' => $pref ? (bool) $pref->mentions : false,
+            'nutrition_options' => $nutritionOptions,
+            'nutritions' => NutritionPreferenceSupport::getSelectedIdsFromInfo($nutritionOptions),
             'message' => 'Preferences updated successfully',
         ]);
     }

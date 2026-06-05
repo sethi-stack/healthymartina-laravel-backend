@@ -9,6 +9,7 @@ use App\Models\CalendarExportJob;
 use App\Models\Categoria;
 use App\Models\ListaIngredientes;
 use App\Models\Receta;
+use App\Support\NutritionPreferenceSupport;
 use App\Services\Calendar\ExternalPdfExportService;
 use App\Services\Mail\ExternalMailService;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
@@ -613,6 +614,7 @@ class CalendarPdfController extends Controller
         }
 
         $recipePages = [];
+        $selectedNutritionIds = NutritionPreferenceSupport::getSelectedIdsFromInfo($this->getUserNutritionalsInfo());
         foreach ($selected as $recipeId) {
             $recipe = $recipes[$recipeId] ?? null;
             if (!$recipe) {
@@ -621,10 +623,12 @@ class CalendarPdfController extends Controller
 
             $portion = $recipe->getPorciones()['cantidad'] ?? 1;
             $ingredients = $this->scaleRecipeIngredients($recipe, $portion);
-            $nutrition = $this->scaleRecipeNutrition($recipe, $portion);
+            $nutrition = $this->filterRecipeNutritionForPreferences(
+                $this->scaleRecipeNutrition($recipe, $portion)
+            );
             $nutritionRows = [];
             foreach (($nutrition['info'] ?? []) as $nutrient) {
-                if (!empty($nutrient['mostrar'])) {
+                if (!empty($nutrient['mostrar']) && in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true)) {
                     $nutritionRows[] = [
                         'nombre' => $nutrient['nombre'] ?? 'Nutriente',
                         'cantidad' => isset($nutrient['cantidad']) ? round((float) $nutrient['cantidad'], 2) : null,
@@ -1022,6 +1026,8 @@ class CalendarPdfController extends Controller
                         'recipe' => $recipePage['recipe'],
                         'portion' => $recipePage['portion'],
                         'ingredients' => $recipePage['ingredients'],
+                        'nutrition' => $recipePage['nutrition'],
+                        'nutritionals_info' => $this->getUserNutritionalsInfo(),
                         'placeholderImage' => $payload['placeholderImage'],
                     ],
                     'a4',
@@ -1330,12 +1336,12 @@ class CalendarPdfController extends Controller
         if (!empty($nutritionalPreferences->nutritional_info)) {
             $info = json_decode($nutritionalPreferences->nutritional_info, true) ?: [];
         } else {
-            $info = config()->get('constants.nutritients') ?? [];
+            $info = null;
         }
 
         return array_map(function ($item) {
             return (object) $item;
-        }, array_values($info));
+        }, array_values(NutritionPreferenceSupport::normalizeNutritionInfo($info)));
     }
 
     private function buildLegacyNutritionInfo(int $calendarId): array
@@ -1462,6 +1468,21 @@ SVG;
                 $nutrition['info'][$nutrientId]['porcentaje'] = $nutrientInfo['porcentaje'] * $ratio;
             }
         }
+
+        return $nutrition;
+    }
+
+    private function filterRecipeNutritionForPreferences(array $nutrition): array
+    {
+        if (!isset($nutrition['info']) || !is_array($nutrition['info'])) {
+            return $nutrition;
+        }
+
+        $selectedNutritionIds = NutritionPreferenceSupport::getSelectedIdsFromInfo($this->getUserNutritionalsInfo());
+
+        $nutrition['info'] = array_values(array_filter($nutrition['info'], function ($nutrient) use ($selectedNutritionIds) {
+            return !empty($nutrient['mostrar']) && in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true);
+        }));
 
         return $nutrition;
     }
