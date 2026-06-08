@@ -7,6 +7,7 @@ use App\Http\Resources\Calendar\CalendarResource;
 use App\Http\Resources\Calendar\CalendarListResource;
 use App\Models\Calendar;
 use App\Models\Plan;
+use App\Support\NutritionPreferenceSupport;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -303,20 +304,20 @@ class CalendarController extends Controller
             ->where('user_id', Auth::id())
             ->first();
 
-        $visibleInfo = [];
-        $filterInfo = [];
-        $info = $nutritionalInfo
-            ? json_decode($nutritionalInfo->nutritional_info)
-            : json_decode(json_encode(config('constants.nutritients', [])), false);
+        $storedNutritionInfo = !empty($nutritionalInfo->nutritional_info)
+            ? json_decode($nutritionalInfo->nutritional_info, true)
+            : null;
+        $info = NutritionPreferenceSupport::normalizeNutritionInfo($storedNutritionInfo);
 
-        if ($info) {
-            foreach ($info as $value) {
-                if (isset($value->mostrar) && $value->mostrar == 1) {
-                    $filterInfo[] = $value->id;
-                }
-                $visibleInfo[] = $value->id;
+        $visibleInfo = [];
+        foreach ($info as $item) {
+            $id = (int) ($item['id'] ?? 0);
+            if ($id > 0) {
+                $visibleInfo[] = $id;
             }
         }
+        $visibleInfo = array_values(array_unique($visibleInfo));
+        $filterInfo = NutritionPreferenceSupport::getSelectedIdsFromInfo($info);
 
         return [$calendar, $visibleInfo, $filterInfo];
     }

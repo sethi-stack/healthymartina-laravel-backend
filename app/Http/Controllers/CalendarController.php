@@ -6,6 +6,7 @@ use App\Models\Calendar;
 use App\Models\Categoria;
 use App\Models\ListaIngredientes;
 use App\Models\Receta;
+use App\Support\NutritionPreferenceSupport;
 use App\User;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use DB;
@@ -56,21 +57,7 @@ class CalendarController extends BaseController
         // $fileName2 = 'sides_schedule.json';
         // File::put($path.'/'.$fileName1,$test['main_schedule']);
         // File::put($path.'/'.$fileName2,$test['sides_schedule']);
-        $nutritional_info = DB::table('nutritional_preferences')->where('user_id', Auth::user()->id)->first();
-        $visible_info = [];
-        $filter_info = [];
-        if ($nutritional_info) {
-            $info = json_decode($nutritional_info->nutritional_info);
-        } else {
-            $info = json_decode(json_encode(config()->get('constants.nutritients')), false);
-        }
-        foreach ($info as $key => $value) {
-            if ($value->mostrar == 1) {
-                $filter_info[] = $value->id;
-            }
-            $visible_info[] = $value->id;
-
-        }
+        [$visible_info, $filter_info] = $this->resolveNutritionPreferenceIds();
         return view('calendario-planificador', compact('calendar', 'calendarios', 'visible_info', 'filter_info'));
     }
     public function viewUpdateCalendario(Request $request)
@@ -862,21 +849,7 @@ class CalendarController extends BaseController
     public function nutriInfo($daykey, $id, $forBottomRow = false)
     {
         $calendar = Calendar::where('id', $id)->first();
-        $nutritional_info = DB::table('nutritional_preferences')->where('user_id', Auth::user()->id)->first();
-        $visible_info = [];
-        $filter_info = [];
-        if ($nutritional_info) {
-            $info = json_decode($nutritional_info->nutritional_info);
-        } else {
-            $info = json_decode(json_encode(config()->get('constants.nutritients')), false);
-        }
-        foreach ($info as $key => $value) {
-            if ($value->mostrar == 1) {
-                $filter_info[] = $value->id;
-            }
-            $visible_info[] = $value->id;
-
-        }
+        [$visible_info, $filter_info] = $this->resolveNutritionPreferenceIds();
         $recipes_list = Receta::all()->sortBy("free");
         if ($forBottomRow) {
             $response = getDayNutritionData($daykey, $calendar, $visible_info, $filter_info);
@@ -889,18 +862,7 @@ class CalendarController extends BaseController
 
     public function transformNutriInfo($allNutris)
     {
-        $nutritional_info = DB::table('nutritional_preferences')->where('user_id', Auth::user()->id)->first();
-        $filter_info = [];
-        if ($nutritional_info) {
-            $info = json_decode($nutritional_info->nutritional_info);
-        } else {
-            $info = json_decode(json_encode(config()->get('constants.nutritients')), false);
-        }
-        foreach ($info as $key => $value) {
-            if ($value->mostrar == 1) {
-                $filter_info[] = $value->id;
-            }
-        }
+        [, $filter_info] = $this->resolveNutritionPreferenceIds();
         $nutriToBeRendered = [];
         foreach ($allNutris as $dayKey => $value) {
             $arrData = $value['data'][$dayKey];
@@ -922,6 +884,31 @@ class CalendarController extends BaseController
             }
         }
         return $nutriToBeRendered;
+    }
+
+    protected function resolveNutritionPreferenceIds(): array
+    {
+        $nutritionalInfo = DB::table('nutritional_preferences')
+            ->where('user_id', Auth::user()->id)
+            ->first();
+
+        $storedInfo = !empty($nutritionalInfo->nutritional_info)
+            ? json_decode($nutritionalInfo->nutritional_info, true)
+            : null;
+
+        $normalized = NutritionPreferenceSupport::normalizeNutritionInfo($storedInfo);
+        $visibleInfo = [];
+        foreach ($normalized as $item) {
+            $id = (int) ($item['id'] ?? 0);
+            if ($id > 0) {
+                $visibleInfo[] = $id;
+            }
+        }
+
+        return [
+            array_values(array_unique($visibleInfo)),
+            NutritionPreferenceSupport::getSelectedIdsFromInfo($normalized),
+        ];
     }
     public function getCantidadForNutrients($dataValue)
     {
