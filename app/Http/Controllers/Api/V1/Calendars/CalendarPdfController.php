@@ -614,7 +614,7 @@ class CalendarPdfController extends Controller
         }
 
         $recipePages = [];
-        $selectedNutritionIds = NutritionPreferenceSupport::getSelectedIdsFromInfo($this->getUserNutritionalsInfo());
+        $selectedNutritionIds = $this->mandatoryExportNutritionIds();
         foreach ($selected as $recipeId) {
             $recipe = $recipes[$recipeId] ?? null;
             if (!$recipe) {
@@ -623,12 +623,12 @@ class CalendarPdfController extends Controller
 
             $portion = $recipe->getPorciones()['cantidad'] ?? 1;
             $ingredients = $this->scaleRecipeIngredients($recipe, $portion);
-            $nutrition = $this->filterRecipeNutritionForPreferences(
+            $nutrition = $this->filterRecipeNutritionForExport(
                 $this->scaleRecipeNutrition($recipe, $portion)
             );
             $nutritionRows = [];
             foreach (($nutrition['info'] ?? []) as $nutrient) {
-                if (!empty($nutrient['mostrar']) && in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true)) {
+                if (in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true)) {
                     $nutritionRows[] = [
                         'nombre' => $nutrient['nombre'] ?? 'Nutriente',
                         'cantidad' => isset($nutrient['cantidad']) ? round((float) $nutrient['cantidad'], 2) : null,
@@ -673,8 +673,12 @@ class CalendarPdfController extends Controller
                     if (!is_array($entry) || count($entry) < 6) {
                         continue;
                     }
+                    $nutrientId = isset($entry[0]) ? (int) $entry[0] : null;
+                    if (!in_array($nutrientId, $this->mandatoryExportNutritionIds(), true)) {
+                        continue;
+                    }
                     $rows[] = [
-                        'id' => isset($entry[0]) ? (int) $entry[0] : null,
+                        'id' => $nutrientId,
                         'nombre' => isset($entry[1]) ? (string) $entry[1] : 'Nutriente',
                         'unidad_medida' => isset($entry[2]) ? (string) $entry[2] : '',
                         'cantidad' => isset($entry[3]) ? round((float) $entry[3], 2) : 0,
@@ -1472,16 +1476,21 @@ SVG;
         return $nutrition;
     }
 
-    private function filterRecipeNutritionForPreferences(array $nutrition): array
+    private function mandatoryExportNutritionIds(): array
+    {
+        return NutritionPreferenceSupport::RECIPE_DEFAULT_IDS;
+    }
+
+    private function filterRecipeNutritionForExport(array $nutrition): array
     {
         if (!isset($nutrition['info']) || !is_array($nutrition['info'])) {
             return $nutrition;
         }
 
-        $selectedNutritionIds = NutritionPreferenceSupport::getSelectedIdsFromInfo($this->getUserNutritionalsInfo());
+        $selectedNutritionIds = $this->mandatoryExportNutritionIds();
 
         $nutrition['info'] = array_values(array_filter($nutrition['info'], function ($nutrient) use ($selectedNutritionIds) {
-            return !empty($nutrient['mostrar']) && in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true);
+            return in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true);
         }));
 
         return $nutrition;

@@ -37,6 +37,21 @@ const RIGHT_ORDER = [
   'colina',
 ];
 
+function renderNutritionSummaryStyles() {
+  return `
+  .nutrition-reference-page{background:#fff}
+  .nutrition-day-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 22px;padding-right:0}
+  .nutrition-day-card{break-inside:avoid;page-break-inside:avoid;margin-bottom:12px;padding-right:2mm}
+  .nutrition-day-title{margin:0 0 10px;font-size:14px;font-weight:700;color:var(--hm-brand-color);line-height:1}
+  .nutrition-macros-line{display:grid;grid-template-columns:repeat(3,max-content);column-gap:12px;row-gap:0;align-items:baseline;margin-bottom:8px;font-size:10px;font-weight:700;line-height:1.18}
+  .macro-carb,.macro-protein,.macro-fat{white-space:nowrap}
+  .macro-carb{color:#b279eb}.macro-protein{color:#3afe72}.macro-fat{color:#e79ccd}
+  .nutrition-rows{font-size:10px;line-height:1.3;color:#000}
+  .nutrition-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px}
+  .nutrition-cell{font-weight:400;padding:1px 0}
+  .nutrition-bold{font-weight:700}`;
+}
+
 function formatAmount(amount, unit) {
   if (amount == null || Number.isNaN(Number(amount))) return '-';
   const value = Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -114,4 +129,4 @@ function renderNutritionSummary(model) {
   return `<section class="pdf-page section-break nutrition-reference-page"><div class="nutrition-day-grid">${cards}</div>${renderFooter(model)}</section>`;
 }
 
-module.exports = { renderNutritionSummary };
+module.exports = { renderNutritionSummary, renderNutritionSummaryStyles };

@@ -1,6 +1,45 @@
 const { esc } = require('./utils');
 const { renderFooter } = require('./footer');
 
+function renderRecipeStyles() {
+  return `
+  .doc-header--recipe{border-bottom:0;margin-bottom:12px;text-align:center}
+  .doc-header--recipe h1{margin:0;font-size:16px;letter-spacing:.02em;text-transform:uppercase;color:var(--hm-brand-color)}
+  .recipe-subtitle{margin-top:6px;font-size:12px;color:#000}
+  .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 12px;position:relative}
+  .recipe-page-primary{position:relative}
+  .recipe-page-primary::before{
+    content:'';
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:357pt;
+    background:var(--hm-brand-color-soft);
+    pointer-events:none;
+    z-index:0;
+  }
+  .recipe-page-primary > *{position:relative;z-index:1}
+  .recipe-top-image img{width:100%;height:100%;object-fit:cover;display:block}
+  .recipe-content-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;align-items:start}
+  .recipe-content-grid-top{margin-bottom:20mm}
+  .recipe-content-grid-inline-secondary{margin-top:8mm;margin-bottom:20mm}
+  .recipe-content-grid-bottom{margin-bottom:20mm}
+  .recipe-grid-card{break-inside:avoid;page-break-inside:avoid;min-height:120px;padding-right:4px}
+  .recipe-grid-card .section-title{margin-top:0;font-size:12px}
+  .recipe-grid-card p{margin:0;font-size:10px;line-height:1.35}
+  .tip-block{margin:0 0 12px;padding:2px 0}
+  .tip-title{margin:0 0 4px;font-size:11px;line-height:1.2;font-weight:700;color:var(--hm-brand-color)}
+  .tip-desc{margin:0;font-size:10px;line-height:1.45}
+  .ingredient-list,.instruction-list{margin:0;padding-left:0;list-style:none}.ingredient-list li,.instruction-list li{margin:0 0 7px}
+  .ingredient-list li{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:2px 0;font-size:11px;line-height:1.35}
+  .ingredient-list .ing-amount{font-weight:800;color:#000;white-space:nowrap;font-size:11px}
+  .ingredient-list .ing-name{color:#000;font-size:11px}
+  .instruction-list{padding-left:20px;list-style:decimal}
+  .instruction-list li{font-size:12px;line-height:1.42;padding-left:2px}
+  .nutrition-table{width:100%;border-collapse:collapse;font-size:9px}.nutrition-table td{padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06)}`;
+}
+
 function nl2br(value) {
   return esc(value || '').replace(/\n/g, '<br/>');
 }
@@ -63,6 +102,20 @@ function formatAmountWithFractions(raw) {
   return esc(`${frac}${rest ? ` ${rest}` : ''}`);
 }
 
+function estimateSecondaryContentWeight(nutrition, tipsBlocks, fallbackTips) {
+  const nutritionWeight = (nutrition || []).length * 1.35;
+  const tipsWeight = (tipsBlocks || []).reduce((sum, tip) => {
+    const titleWords = String(tip?.title || '').trim().split(/\s+/).filter(Boolean).length;
+    const descWords = String(tip?.description || '').trim().split(/\s+/).filter(Boolean).length;
+    return sum + 1 + (titleWords / 8) + (descWords / 18);
+  }, 0);
+  const fallbackTipsWeight = fallbackTips
+    ? String(fallbackTips).trim().split(/\s+/).filter(Boolean).length / 18
+    : 0;
+
+  return nutritionWeight + tipsWeight + fallbackTipsWeight;
+}
+
 function renderRecipes(model, options = {}) {
   const onRecipeRendered = typeof options.onRecipeRendered === 'function'
     ? options.onRecipeRendered
@@ -84,6 +137,8 @@ function renderRecipes(model, options = {}) {
           ${tip.description ? `<p class="tip-desc">${nl2br(tip.description)}</p>` : ''}
         </div>`).join('')
       : (r.tips ? `<p class="tip-desc">${nl2br(r.tips)}</p>` : '');
+    const secondaryWeight = estimateSecondaryContentWeight(r.nutrition || [], r.tipsBlocks || [], r.tips || '');
+    const canInlineSecondary = secondaryWeight > 0 && secondaryWeight <= 12;
 
     const metaPorciones = r.porciones != null ? `${esc(r.porciones)} porciones` : '';
     const metaMinutos = r.minutos != null && r.minutos > 0 ? `${esc(r.minutos)} minutos` : '';
@@ -105,8 +160,18 @@ function renderRecipes(model, options = {}) {
           <ol class="instruction-list">${instructions}</ol>
         </article>
       </div>
+      ${canInlineSecondary ? `<div class="recipe-content-grid recipe-content-grid-inline-secondary">
+        <article class="recipe-grid-card">
+          <h2 class="section-title">Información nutricional</h2>
+          <table class="nutrition-table">${nutrition}</table>
+        </article>
+        <article class="recipe-grid-card">
+          <h2 class="section-title">Tips</h2>
+          ${tipsBlocks}
+        </article>
+      </div>` : ''}
       ${footer}
-    </section>
+    </section>${canInlineSecondary ? '' : `
 
     <section class="pdf-page section-break recipe-page-secondary">
       <div class="doc-header"><div class="brand-note">${esc(model?.cover?.brandName || 'Healthy Martina')}</div><h1>${esc(r.title)}</h1></div>
@@ -121,8 +186,8 @@ function renderRecipes(model, options = {}) {
         </article>
       </div>
       ${footer}
-    </section>`;
+    </section>`}`;
   }).join('');
 }
 
-module.exports = { renderRecipes };
+module.exports = { renderRecipes, renderRecipeStyles };

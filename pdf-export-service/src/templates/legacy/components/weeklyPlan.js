@@ -1,6 +1,21 @@
 const { esc, dayDefaultLabels, mealDefaultLabels } = require('./utils');
 const { renderFooter } = require('./footer');
 
+function renderWeeklyPlanStyles() {
+  return `
+  .weekly-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 22px}
+  .day-card{break-inside:avoid;page-break-inside:avoid}
+  .day-title{margin:0 0 8px;font-size:16px;line-height:1;font-weight:800;color:var(--hm-brand-color);text-transform:uppercase}
+  .meal-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
+  .meal-images{width:62px;display:flex;flex-direction:column;gap:2px;flex:0 0 62px}
+  .meal-images img{width:62px;height:36px;object-fit:cover;display:block}
+  .meal-images img.item-taken{filter:grayscale(100%);opacity:.55}
+  .meal-image-fallback{width:62px;height:36px;background:#fafafa;border:1px solid #eee}
+  .meal-copy{min-width:0;flex:1}
+  .meal-name{font-size:11px;font-weight:800;color:var(--hm-brand-color);text-transform:uppercase;margin-bottom:2px}
+  .meal-desc{font-size:8px;line-height:1.3;color:#111}`;
+}
+
 function renderWeeklyPlan(model) {
   if (!model.weeklyPlan?.days?.length) return '';
 
@@ -55,4 +70,4 @@ function renderWeeklyPlan(model) {
   </section>`;
 }
 
-module.exports = { renderWeeklyPlan };
+module.exports = { renderWeeklyPlan, renderWeeklyPlanStyles };

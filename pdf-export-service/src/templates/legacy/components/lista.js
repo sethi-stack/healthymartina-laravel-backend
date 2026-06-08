@@ -1,12 +1,78 @@
 const { esc } = require('./utils');
 const { renderFooter } = require('./footer');
 
-const CATEGORIES_PER_PAGE = 4;
+const MAX_ROWS_PER_COLUMN = 16;
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
+function renderListaStyles() {
+  return `
+  .lista-grid{width:100%;border-collapse:collapse}.lista-grid td{width:50%;vertical-align:top;padding:0 12px 0 0}
+  .lista-category{margin-bottom:14px;break-inside:avoid;page-break-inside:avoid}
+  .lista-cat-title{font-size:12px;font-weight:700;color:#111;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #ececec;padding:0 0 4px;margin-bottom:6px}
+  .lista-items{width:100%}
+  .lista-item-row{display:flex;align-items:flex-start;gap:7px;margin:0 0 6px;padding:1px 0;font-size:11px;line-height:1.26}
+  .checkbox-cell{display:inline-block;width:14px;min-width:14px;text-align:center;font-size:11px;line-height:1.2}
+  .item-amount{display:inline-block;color:#555;font-size:11px;font-weight:700;min-width:64px;white-space:nowrap}
+  .item-name{display:inline-block;flex:1 1 auto;text-align:left}`;
+}
+
+function estimateCategoryRows(category) {
+  const itemCount = Array.isArray(category?.items) ? category.items.length : 0;
+  // Title + spacing + items
+  return Math.max(3, itemCount + 2);
+}
+
+function paginateCategories(categories) {
+  const pages = [];
+  let page = { left: [], right: [] };
+  let leftRows = 0;
+  let rightRows = 0;
+
+  const pushPage = () => {
+    if (page.left.length || page.right.length) {
+      pages.push(page);
+    }
+    page = { left: [], right: [] };
+    leftRows = 0;
+    rightRows = 0;
+  };
+
+  categories.forEach((category) => {
+    const rows = estimateCategoryRows(category);
+
+    if (leftRows <= rightRows) {
+      if (leftRows + rows <= MAX_ROWS_PER_COLUMN || !page.left.length) {
+        page.left.push(category);
+        leftRows += rows;
+        return;
+      }
+      if (rightRows + rows <= MAX_ROWS_PER_COLUMN || !page.right.length) {
+        page.right.push(category);
+        rightRows += rows;
+        return;
+      }
+      pushPage();
+      page.left.push(category);
+      leftRows += rows;
+      return;
+    }
+
+    if (rightRows + rows <= MAX_ROWS_PER_COLUMN || !page.right.length) {
+      page.right.push(category);
+      rightRows += rows;
+      return;
+    }
+    if (leftRows + rows <= MAX_ROWS_PER_COLUMN || !page.left.length) {
+      page.left.push(category);
+      leftRows += rows;
+      return;
+    }
+    pushPage();
+    page.left.push(category);
+    leftRows += rows;
+  });
+
+  pushPage();
+  return pages;
 }
 
 function renderLista(model) {
@@ -28,15 +94,13 @@ function renderLista(model) {
     return `<div class="lista-category"><div class="lista-cat-title">${esc(cat.name)}</div><div class="lista-items">${items}</div></div>`;
   }).join('');
 
-  const pages = chunk(categories, CATEGORIES_PER_PAGE);
-  return pages.map((pageCategories) => {
-    const half = Math.ceil(pageCategories.length / 2);
-    const cols = [pageCategories.slice(0, half), pageCategories.slice(half)];
+  const pages = paginateCategories(categories);
+  return pages.map((pageCols) => {
     return `<section class="pdf-page section-break"><div class="section-title">Lista de Compras</div>
-      <table class="lista-grid"><tr><td>${renderCol(cols[0])}</td><td>${renderCol(cols[1])}</td></tr></table>
+      <table class="lista-grid"><tr><td>${renderCol(pageCols.left)}</td><td>${renderCol(pageCols.right)}</td></tr></table>
       ${renderFooter(model)}
     </section>`;
   }).join('');
 }
 
-module.exports = { renderLista };
+module.exports = { renderLista, renderListaStyles };
