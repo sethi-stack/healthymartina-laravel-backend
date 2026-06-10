@@ -223,6 +223,11 @@ php artisan key:generate
 > php artisan migrate
 > ```
 >
+> If you already imported a production dump onto a fresh or snapshot-restored droplet,
+> make sure you complete [Section 14.1](#141-handle-migrations-that-conflict-with-the-imported-db-dump)
+> before running `scripts/deploy.sh`, otherwise Laravel will try to recreate tables
+> that already exist.
+>
 > For a **fresh installation** with no existing data:
 >
 > ```bash
@@ -511,14 +516,17 @@ rclone ls spaces:healthymartina | wc -l
 mkdir /tmp/gcs-migration
 gsutil -m rsync -r gs://YOUR_GCS_BUCKET /tmp/gcs-migration/
 
-# Upload to DO Spaces using AWS CLI (configured for Spaces)
+# Upload to DO Spaces using AWS CLI (access key + secret key)
+AWS_ACCESS_KEY_ID=YOUR_SPACES_ACCESS_KEY \
+AWS_SECRET_ACCESS_KEY=YOUR_SPACES_SECRET_KEY \
 aws s3 sync /tmp/gcs-migration/ s3://healthymartina \
   --endpoint-url https://nyc3.digitaloceanspaces.com \
-  --profile spaces \
   --acl public-read
 
 # Verify
-aws s3 ls s3://healthymartina --recursive --profile spaces | wc -l
+AWS_ACCESS_KEY_ID=YOUR_SPACES_ACCESS_KEY \
+AWS_SECRET_ACCESS_KEY=YOUR_SPACES_SECRET_KEY \
+aws s3 ls s3://healthymartina --recursive | wc -l
 ```
 
 ### Verify file accessibility
@@ -743,6 +751,10 @@ php8.3 artisan vendor:publish --provider="Backpack\CRUD\BackpackServiceProvider"
 php8.3 artisan basset:cache
 php8.3 artisan storage:link
 ```
+
+If you are rebuilding from a snapshot or restoring a production dump, also see
+[`docs/SNAPSHOT_DROPLET_RECOVERY.md`](docs/SNAPSHOT_DROPLET_RECOVERY.md) for the
+full recovery sequence.
 
 ---
 
