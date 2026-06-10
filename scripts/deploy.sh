@@ -41,6 +41,7 @@ echo "==> Caching config / routes / views..."
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
+"$PHP_BIN" artisan basset:cache
 
 echo "==> Reloading PHP-FPM..."
 sudo systemctl reload "$PHP_FPM_SERVICE"

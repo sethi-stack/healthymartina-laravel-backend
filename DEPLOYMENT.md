@@ -756,6 +756,10 @@ If you are rebuilding from a snapshot or restoring a production dump, also see
 [`docs/SNAPSHOT_DROPLET_RECOVERY.md`](docs/SNAPSHOT_DROPLET_RECOVERY.md) for the
 full recovery sequence.
 
+If Backpack icons render as blanks, rerun `php8.3 artisan basset:cache` on the droplet.
+The CoreUIv2 admin theme loads Line Awesome through Backpack's Basset pipeline, so the
+icons stop rendering if that cache is missing or stale.
+
 ---
 
 ## 15. Droplet Setup History
