@@ -1,12 +1,13 @@
-const { esc } = require('./utils');
-const { renderFooter } = require('./footer');
+const { esc } = require("./utils");
+const { renderFooter } = require("./footer");
 
 function renderRecipeStyles() {
-  return `
+    return `
   .doc-header--recipe{border-bottom:0;margin-bottom:12px;text-align:center}
   .doc-header--recipe h1{margin:0;font-size:16px;letter-spacing:.02em;text-transform:uppercase;color:var(--hm-brand-color)}
   .recipe-subtitle{margin-top:6px;font-size:12px;color:#000}
   .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 12px;position:relative}
+  .recipe-page-primary--compact .recipe-top-image{height:300pt}
   .recipe-page-primary{position:relative}
   .recipe-page-primary::before{
     content:'';
@@ -19,13 +20,17 @@ function renderRecipeStyles() {
     pointer-events:none;
     z-index:0;
   }
+  .recipe-page-primary--compact::before{height:300pt}
   .recipe-page-primary > *{position:relative;z-index:1}
   .recipe-top-image img{width:100%;height:100%;object-fit:cover;display:block}
   .recipe-content-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;align-items:start}
   .recipe-content-grid-top{margin-bottom:20mm}
   .recipe-content-grid-inline-secondary{margin-top:8mm;margin-bottom:20mm}
   .recipe-content-grid-bottom{margin-bottom:20mm}
+  .recipe-content-grid-bottom--single{grid-template-columns:1fr;gap:8px;margin-bottom:8mm}
+  .recipe-content-grid-bottom--stacked{margin-top:4mm;margin-bottom:16mm}
   .recipe-grid-card{break-inside:avoid;page-break-inside:avoid;min-height:120px;padding-right:4px}
+  .recipe-content-grid-bottom--single .recipe-grid-card{min-height:0}
   .recipe-grid-card .section-title{margin-top:0;font-size:12px}
   .recipe-grid-card p{margin:0;font-size:10px;line-height:1.35}
   .tip-block{margin:0 0 12px;padding:2px 0}
@@ -41,126 +46,304 @@ function renderRecipeStyles() {
 }
 
 function nl2br(value) {
-  return esc(value || '').replace(/\n/g, '<br/>');
+    return esc(value || "").replace(/\n/g, "<br/>");
 }
 
 function gcd(a, b) {
-  let x = Math.abs(a);
-  let y = Math.abs(b);
-  while (y) {
-    const t = y;
-    y = x % y;
-    x = t;
-  }
-  return x || 1;
+    let x = Math.abs(a);
+    let y = Math.abs(b);
+    while (y) {
+        const t = y;
+        y = x % y;
+        x = t;
+    }
+    return x || 1;
 }
 
 function toFraction(value) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return null;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
 
-  const sign = n < 0 ? '-' : '';
-  const abs = Math.abs(n);
-  const whole = Math.floor(abs + 1e-9);
-  const frac = abs - whole;
-  if (frac < 1e-6) return `${sign}${whole}`;
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n);
+    const whole = Math.floor(abs + 1e-9);
+    const frac = abs - whole;
+    if (frac < 1e-6) return `${sign}${whole}`;
 
-  const denominators = [2, 3, 4, 8, 16];
-  let best = null;
-  for (const d of denominators) {
-    const num = Math.round(frac * d);
-    const approx = num / d;
-    const err = Math.abs(frac - approx);
-    if (!best || err < best.err) {
-      best = { num, den: d, err };
+    const denominators = [2, 3, 4, 8, 16];
+    let best = null;
+    for (const d of denominators) {
+        const num = Math.round(frac * d);
+        const approx = num / d;
+        const err = Math.abs(frac - approx);
+        if (!best || err < best.err) {
+            best = { num, den: d, err };
+        }
     }
-  }
 
-  if (!best || best.num === 0) return `${sign}${whole}`;
-  if (best.num === best.den) return `${sign}${whole + 1}`;
+    if (!best || best.num === 0) return `${sign}${whole}`;
+    if (best.num === best.den) return `${sign}${whole + 1}`;
 
-  const div = gcd(best.num, best.den);
-  const num = best.num / div;
-  const den = best.den / div;
+    const div = gcd(best.num, best.den);
+    const num = best.num / div;
+    const den = best.den / div;
 
-  if (whole > 0) return `${sign}${whole} ${num}/${den}`;
-  return `${sign}${num}/${den}`;
+    if (whole > 0) return `${sign}${whole} ${num}/${den}`;
+    return `${sign}${num}/${den}`;
 }
 
 function formatAmountWithFractions(raw) {
-  const text = String(raw || '').trim();
-  if (!text) return '';
+    const text = String(raw || "").trim();
+    if (!text) return "";
 
-  const match = text.match(/^(-?\d+(?:[.,]\d+)?)\s*(.*)$/);
-  if (!match) return esc(text);
+    const match = text.match(/^(-?\d+(?:[.,]\d+)?)\s*(.*)$/);
+    if (!match) return esc(text);
 
-  const num = match[1].replace(',', '.');
-  const rest = String(match[2] || '').trim();
-  const frac = toFraction(num);
-  if (!frac) return esc(text);
+    const num = match[1].replace(",", ".");
+    const rest = String(match[2] || "").trim();
+    const frac = toFraction(num);
+    if (!frac) return esc(text);
 
-  return esc(`${frac}${rest ? ` ${rest}` : ''}`);
+    return esc(`${frac}${rest ? ` ${rest}` : ""}`);
 }
 
-function estimateSecondaryContentWeight(nutrition, tipsBlocks, fallbackTips) {
-  const nutritionWeight = (nutrition || []).length * 1.35;
-  const tipsWeight = (tipsBlocks || []).reduce((sum, tip) => {
-    const titleWords = String(tip?.title || '').trim().split(/\s+/).filter(Boolean).length;
-    const descWords = String(tip?.description || '').trim().split(/\s+/).filter(Boolean).length;
-    return sum + 1 + (titleWords / 8) + (descWords / 18);
-  }, 0);
-  const fallbackTipsWeight = fallbackTips
-    ? String(fallbackTips).trim().split(/\s+/).filter(Boolean).length / 18
-    : 0;
+function estimateIngredientWeight(ingredientsList) {
+    return (ingredientsList || []).reduce((sum, ingredient) => {
+        const nameWords = String(ingredient?.name || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean).length;
+        const amountWords = String(ingredient?.amount || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean).length;
+        return sum + 1 + nameWords / 10 + amountWords / 6;
+    }, 0);
+}
 
-  return nutritionWeight + tipsWeight + fallbackTipsWeight;
+function estimateInstructionWeight(instructionsList) {
+    return (instructionsList || []).reduce((sum, step) => {
+        const wordCount = String(step || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean).length;
+        return sum + 1 + wordCount / 16;
+    }, 0);
+}
+
+function estimatePrimaryContentWeight(ingredientsList, instructionsList) {
+    return (
+        estimateIngredientWeight(ingredientsList) +
+        estimateInstructionWeight(instructionsList)
+    );
+}
+
+function estimateSecondaryContentWeight(nutritionList, tipsList, fallbackTips) {
+    const nutritionWeight = (nutritionList || []).length * 1.2;
+    const tipsWeight = (tipsList || []).reduce((sum, tip) => {
+        const titleWords = String(tip?.title || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean).length;
+        const descWords = String(tip?.description || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean).length;
+        return sum + 1 + titleWords / 8 + descWords / 18;
+    }, 0);
+    const fallbackTipsWeight = fallbackTips
+        ? String(fallbackTips).trim().split(/\s+/).filter(Boolean).length / 18
+        : 0;
+
+    return nutritionWeight + tipsWeight + fallbackTipsWeight;
+}
+
+function splitByWeight(items, getWeight, capacity) {
+    const list = items || [];
+    if (!list.length) {
+        return { head: [], tail: [] };
+    }
+
+    let used = 0;
+    let index = 0;
+    while (index < list.length) {
+        const itemWeight = Math.max(1, getWeight(list[index]));
+        if (index > 0 && used + itemWeight > capacity) {
+            break;
+        }
+        used += itemWeight;
+        index += 1;
+    }
+
+    return {
+        head: list.slice(0, index),
+        tail: list.slice(index),
+    };
 }
 
 function renderRecipes(model, options = {}) {
-  const onRecipeRendered = typeof options.onRecipeRendered === 'function'
-    ? options.onRecipeRendered
-    : null;
-  const recipes = model.recipes || [];
-  const footer = renderFooter(model);
-  if (!recipes.length) return '';
+    const onRecipeRendered =
+        typeof options.onRecipeRendered === "function"
+            ? options.onRecipeRendered
+            : null;
+    const recipes = model.recipes || [];
+    const footer = renderFooter(model);
+    if (!recipes.length) return "";
 
-  return recipes.map((r, index) => {
-    if (onRecipeRendered) {
-      onRecipeRendered(index + 1, recipes.length, r);
-    }
-    const ingredients = (r.ingredients || []).map((i) => `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(i.name)}</span></li>`).join('');
-    const instructions = (r.instructions || []).map((s) => `<li>${esc(s)}</li>`).join('');
-    const nutrition = (r.nutrition || []).map((n) => `<tr><td>${esc(n.name)}</td><td class="right">${esc(n.amount || '')}</td></tr>`).join('');
-    const tipsBlocks = (r.tipsBlocks || []).length
-      ? (r.tipsBlocks || []).map((tip) => `<div class="tip-block">
-          ${tip.title ? `<h3 class="tip-title">${esc(tip.title)}</h3>` : ''}
-          ${tip.description ? `<p class="tip-desc">${nl2br(tip.description)}</p>` : ''}
-        </div>`).join('')
-      : (r.tips ? `<p class="tip-desc">${nl2br(r.tips)}</p>` : '');
-    const secondaryWeight = estimateSecondaryContentWeight(r.nutrition || [], r.tipsBlocks || [], r.tips || '');
-    const canInlineSecondary = secondaryWeight > 0 && secondaryWeight <= 12;
+    return recipes
+        .map((r, index) => {
+            if (onRecipeRendered) {
+                onRecipeRendered(index + 1, recipes.length, r);
+            }
+            const nutrition = (r.nutrition || [])
+                .map(
+                    (n) =>
+                        `<tr><td>${esc(n.name)}</td><td class="right">${esc(n.amount || "")}</td></tr>`,
+                )
+                .join("");
+            const tipsBlocks = (r.tipsBlocks || []).length
+                ? (r.tipsBlocks || [])
+                      .map(
+                          (tip) => `<div class="tip-block">
+          ${tip.title ? `<h3 class="tip-title">${esc(tip.title)}</h3>` : ""}
+          ${tip.description ? `<p class="tip-desc">${nl2br(tip.description)}</p>` : ""}
+        </div>`,
+                      )
+                      .join("")
+                : r.tips
+                  ? `<p class="tip-desc">${nl2br(r.tips)}</p>`
+                  : "";
+            const ingredientItems = r.ingredients || [];
+            const instructionItems = r.instructions || [];
+            const ingredientWeight = estimateIngredientWeight(ingredientItems);
+            const instructionWeight =
+                estimateInstructionWeight(instructionItems);
+            const primaryWeight = estimatePrimaryContentWeight(
+                ingredientItems,
+                instructionItems,
+            );
+            const secondaryWeight = estimateSecondaryContentWeight(
+                r.nutrition || [],
+                r.tipsBlocks || [],
+                r.tips || "",
+            );
+            const useCompactPrimary =
+                primaryWeight > 22 ||
+                ingredientItems.length > 10 ||
+                instructionItems.length > 8;
+            const columnCapacity = useCompactPrimary ? 20 : 22;
+            const splitIngredients = splitByWeight(
+                ingredientItems,
+                (ingredient) =>
+                    1 +
+                    String(ingredient?.name || "")
+                        .trim()
+                        .split(/\s+/)
+                        .filter(Boolean).length /
+                        10 +
+                    String(ingredient?.amount || "")
+                        .trim()
+                        .split(/\s+/)
+                        .filter(Boolean).length /
+                        6,
+                columnCapacity,
+            );
+            const splitInstructions = splitByWeight(
+                instructionItems,
+                (step) =>
+                    1 +
+                    String(step || "")
+                        .trim()
+                        .split(/\s+/)
+                        .filter(Boolean).length /
+                        16,
+                columnCapacity,
+            );
 
-    const metaPorciones = r.porciones != null ? `${esc(r.porciones)} porciones` : '';
-    const metaMinutos = r.minutos != null && r.minutos > 0 ? `${esc(r.minutos)} minutos` : '';
-    const metaLine = [metaPorciones, metaMinutos].filter(Boolean).join('  ');
+            const primaryIngredients = splitIngredients.head;
+            const detailIngredients = splitIngredients.tail;
+            const primaryInstructions = splitInstructions.head;
+            const detailInstructions = splitInstructions.tail;
+            const needsPrimaryDetailsPage =
+                detailIngredients.length > 0 || detailInstructions.length > 0;
+            const detailSectionCount =
+                (detailIngredients.length ? 1 : 0) +
+                (detailInstructions.length ? 1 : 0);
+            const detailWeight = estimatePrimaryContentWeight(
+                detailIngredients,
+                detailInstructions,
+            );
+            const mergeSecondaryIntoDetails =
+                needsPrimaryDetailsPage &&
+                secondaryWeight > 0 &&
+                detailWeight + secondaryWeight <= 24;
 
-    return `<section class="pdf-page section-break recipe-page-primary">
+            const renderIngredientItems = (items) =>
+                items
+                    .map(
+                        (i) =>
+                            `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(i.name)}</span></li>`,
+                    )
+                    .join("");
+            const renderInstructionItems = (items) =>
+                items.map((s) => `<li>${esc(s)}</li>`).join("");
+            const primaryInstructionStart = 1;
+            const detailInstructionStart = primaryInstructions.length + 1;
+
+            const metaPorciones =
+                r.porciones != null ? `${esc(r.porciones)} porciones` : "";
+            const metaMinutos =
+                r.minutos != null && r.minutos > 0
+                    ? `${esc(r.minutos)} minutos`
+                    : "";
+            const metaLine = [metaPorciones, metaMinutos]
+                .filter(Boolean)
+                .join("  ");
+
+            return `<section class="pdf-page section-break recipe-page-primary${useCompactPrimary ? " recipe-page-primary--compact" : ""}">
       <div class="doc-header doc-header--recipe">
         <h1>${esc(r.title)}</h1>
-        ${metaLine ? `<div class="recipe-subtitle"><strong>${metaPorciones}</strong>${metaMinutos ? `&nbsp;&nbsp;${metaMinutos}` : ''}</div>` : ''}
+        ${metaLine ? `<div class="recipe-subtitle"><strong>${metaPorciones}</strong>${metaMinutos ? `&nbsp;&nbsp;${metaMinutos}` : ""}</div>` : ""}
       </div>
-      <div class="recipe-top-image"><img src="${esc(r.image || '')}" alt="${esc(r.title)}" /></div>
+      <div class="recipe-top-image"><img src="${esc(r.image || "")}" alt="${esc(r.title)}" /></div>
       <div class="recipe-content-grid recipe-content-grid-top">
         <article class="recipe-grid-card">
           <h2 class="section-title">Ingredientes</h2>
-          <ul class="ingredient-list">${ingredients}</ul>
+          <ul class="ingredient-list">${renderIngredientItems(primaryIngredients)}</ul>
         </article>
         <article class="recipe-grid-card">
           <h2 class="section-title">Instrucciones</h2>
-          <ol class="instruction-list">${instructions}</ol>
+          <ol class="instruction-list" start="${primaryInstructionStart}">${renderInstructionItems(primaryInstructions)}</ol>
         </article>
       </div>
-      ${canInlineSecondary ? `<div class="recipe-content-grid recipe-content-grid-inline-secondary">
+      ${footer}
+    </section>${
+        needsPrimaryDetailsPage
+            ? `
+
+    <section class="pdf-page section-break recipe-page-primary-details">
+      <div class="doc-header"><div class="brand-note">${esc(model?.cover?.brandName || "Healthy Martina")}</div><h1>${esc(r.title)}</h1></div>
+      <div class="recipe-content-grid recipe-content-grid-bottom${detailSectionCount === 1 ? " recipe-content-grid-bottom--single" : ""}">
+        <article class="recipe-grid-card">
+          ${
+              detailIngredients.length
+                  ? `<h2 class="section-title">Ingredientes</h2>
+          <ul class="ingredient-list">${renderIngredientItems(detailIngredients)}</ul>`
+                  : ""
+          }
+        </article>
+        <article class="recipe-grid-card">
+          ${
+              detailInstructions.length
+                  ? `<h2 class="section-title">Instrucciones</h2>
+          <ol class="instruction-list" start="${detailInstructionStart}">${renderInstructionItems(detailInstructions)}</ol>`
+                  : ""
+          }
+        </article>
+      </div>
+      ${
+          mergeSecondaryIntoDetails
+              ? `<div class="recipe-content-grid recipe-content-grid-bottom recipe-content-grid-bottom--stacked">
         <article class="recipe-grid-card">
           <h2 class="section-title">Información nutricional</h2>
           <table class="nutrition-table">${nutrition}</table>
@@ -169,12 +352,20 @@ function renderRecipes(model, options = {}) {
           <h2 class="section-title">Tips</h2>
           ${tipsBlocks}
         </article>
-      </div>` : ''}
+      </div>`
+              : ""
+      }
       ${footer}
-    </section>${canInlineSecondary ? '' : `
+    </section>
+    `
+            : ""
+    }
 
-    <section class="pdf-page section-break recipe-page-secondary">
-      <div class="doc-header"><div class="brand-note">${esc(model?.cover?.brandName || 'Healthy Martina')}</div><h1>${esc(r.title)}</h1></div>
+    ${
+        mergeSecondaryIntoDetails
+            ? ""
+            : `<section class="pdf-page section-break recipe-page-secondary">
+      <div class="doc-header"><div class="brand-note">${esc(model?.cover?.brandName || "Healthy Martina")}</div><h1>${esc(r.title)}</h1></div>
       <div class="recipe-content-grid recipe-content-grid-bottom">
         <article class="recipe-grid-card">
           <h2 class="section-title">Información nutricional</h2>
@@ -186,8 +377,10 @@ function renderRecipes(model, options = {}) {
         </article>
       </div>
       ${footer}
-    </section>`}`;
-  }).join('');
+    </section>`
+    }`;
+        })
+        .join("");
 }
 
 module.exports = { renderRecipes, renderRecipeStyles };
