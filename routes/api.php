@@ -34,7 +34,7 @@ Route::prefix('v1')->group(function () {
     // Public routes (Authentication)
     Route::prefix('auth')->group(function () {
         Route::post('/login', [LoginController::class, 'store'])->name('api.v1.auth.login');
-        Route::post('/register', [RegisterController::class, 'store'])->name('api.v1.auth.register');
+        // Route::post('/register', [RegisterController::class, 'store'])->name('api.v1.auth.register');
         
         // Email verification (public - called from email link)
         Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->name('api.v1.auth.verify');
