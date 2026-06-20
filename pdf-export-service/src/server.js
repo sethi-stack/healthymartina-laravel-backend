@@ -510,6 +510,7 @@ async function renderHtmlToPdf(html) {
 
     // `networkidle0` can hang with remote assets; `domcontentloaded` is safer for HTML-to-PDF.
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: renderTimeoutMs });
+    await compressCalendarImages(browser, page, renderTimeoutMs);
     await primeImages(page);
     await waitForImages(page, imageWaitTimeoutMs);
     await sleep(300);
@@ -529,6 +530,212 @@ async function renderHtmlToPdf(html) {
   } finally {
     await browser.close();
   }
+}
+
+async function compressCalendarImages(browser, page, timeoutMs) {
+  const calendarImages = await page.$$eval('img[data-pdf-calendar-image="1"]', (imgs) =>
+    imgs
+      .map((img) => ({
+        src: img.getAttribute('src') || img.currentSrc || img.src || '',
+      }))
+      .filter((item) => item.src),
+  );
+
+  if (!calendarImages.length) {
+    return;
+  }
+
+  const uniqueSources = Array.from(new Set(calendarImages.map((item) => item.src))).slice(0, 120);
+  if (!uniqueSources.length) {
+    return;
+  }
+
+  const helperPage = await browser.newPage();
+  helperPage.setDefaultNavigationTimeout(timeoutMs);
+  helperPage.setDefaultTimeout(timeoutMs);
+
+  try {
+    await helperPage.setContent('<!doctype html><html><body></body></html>', {
+      waitUntil: 'domcontentloaded',
+      timeout: timeoutMs,
+    });
+
+    const replacements = {};
+    for (const src of uniqueSources) {
+      const compressed = await buildCompressedCalendarImage(src, helperPage, timeoutMs);
+      if (compressed) {
+        replacements[src] = compressed;
+      }
+    }
+
+    if (!Object.keys(replacements).length) {
+      return;
+    }
+
+    await page.evaluate((replacementMap) => {
+      document.querySelectorAll('img[data-pdf-calendar-image="1"]').forEach((img) => {
+        const originalSrc = img.getAttribute('src') || img.currentSrc || img.src || '';
+        const replacement = replacementMap[originalSrc];
+        if (replacement) {
+          img.setAttribute('src', replacement);
+        }
+      });
+    }, replacements);
+  } finally {
+    await helperPage.close();
+  }
+}
+
+async function buildCompressedCalendarImage(src, helperPage, timeoutMs) {
+  let response;
+  try {
+    response = await fetch(src, {
+      signal: AbortSignal.timeout(Math.min(timeoutMs, 20000)),
+    });
+  } catch (_error) {
+    return null;
+  }
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const contentType = String(response.headers.get('content-type') || '');
+  let arrayBuffer;
+  try {
+    arrayBuffer = await response.arrayBuffer();
+  } catch (_error) {
+    return null;
+  }
+
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    return null;
+  }
+
+  const normalizedContentType = resolveImageContentType(src, contentType, arrayBuffer);
+  if (!normalizedContentType) {
+    return null;
+  }
+
+  const sourceDataUrl = `data:${normalizedContentType};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+
+  try {
+    const compressed = await helperPage.evaluate(async ({ dataUrl, width, height, quality }) => {
+      const image = new Image();
+      image.decoding = 'sync';
+      image.loading = 'eager';
+      image.src = dataUrl;
+      if (typeof image.decode === 'function') {
+        await image.decode();
+      } else {
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+        });
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d', { alpha: false });
+      if (!context) {
+        return null;
+      }
+
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, width, height);
+
+      const sourceWidth = image.naturalWidth || width;
+      const sourceHeight = image.naturalHeight || height;
+      const scale = Math.max(width / sourceWidth, height / sourceHeight);
+      const drawWidth = sourceWidth * scale;
+      const drawHeight = sourceHeight * scale;
+      const offsetX = (width - drawWidth) / 2;
+      const offsetY = (height - drawHeight) / 2;
+
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+      return canvas.toDataURL('image/jpeg', quality);
+    }, {
+      dataUrl: sourceDataUrl,
+      width: 124,
+      height: 72,
+      quality: 0.68,
+    });
+
+    if (typeof compressed === 'string' && compressed.length > 0) {
+      return compressed;
+    }
+
+    return null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function resolveImageContentType(src, contentType, arrayBuffer) {
+  const normalizedHeader = String(contentType || '').split(';')[0].trim().toLowerCase();
+  if (normalizedHeader.startsWith('image/')) {
+    return normalizedHeader;
+  }
+
+  const bySignature = sniffImageContentType(arrayBuffer);
+  if (bySignature) {
+    return bySignature;
+  }
+
+  const pathname = String(src || '').split('?')[0].toLowerCase();
+  if (pathname.endsWith('.jpg') || pathname.endsWith('.jpeg')) return 'image/jpeg';
+  if (pathname.endsWith('.png')) return 'image/png';
+  if (pathname.endsWith('.webp')) return 'image/webp';
+  if (pathname.endsWith('.gif')) return 'image/gif';
+  if (pathname.endsWith('.svg')) return 'image/svg+xml';
+
+  return null;
+}
+
+function sniffImageContentType(arrayBuffer) {
+  if (!arrayBuffer || arrayBuffer.byteLength < 4) {
+    return null;
+  }
+
+  const bytes = new Uint8Array(arrayBuffer);
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return 'image/png';
+  }
+  if (
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38
+  ) {
+    return 'image/gif';
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+
+  return null;
 }
 
 async function primeImages(page) {

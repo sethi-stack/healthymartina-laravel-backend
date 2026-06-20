@@ -34,7 +34,7 @@ function renderWeeklyPlan(model) {
           .filter((item) => !!item.image)
           .map((item) => {
             const cls = item.leftover ? 'item-taken' : '';
-            return `<img class="${cls}" src="${esc(item.image)}" alt="${esc(item.title)}" />`;
+            return `<img class="${cls}" data-pdf-calendar-image="1" src="${esc(item.image)}" alt="${esc(item.title)}" />`;
           })
           .join('');
 
