@@ -554,6 +554,15 @@ async function compressCalendarImages(browser, page, timeoutMs) {
   const helperPage = await browser.newPage();
   helperPage.setDefaultNavigationTimeout(timeoutMs);
   helperPage.setDefaultTimeout(timeoutMs);
+  const stats = {
+    fetch_failed: 0,
+    non_ok_response: 0,
+    empty_payload: 0,
+    unsupported_type: 0,
+    canvas_failed: 0,
+    canvas_empty: 0,
+    compressed: 0,
+  };
 
   try {
     await helperPage.setContent('<!doctype html><html><body></body></html>', {
@@ -563,7 +572,7 @@ async function compressCalendarImages(browser, page, timeoutMs) {
 
     const replacements = {};
     for (const src of uniqueSources) {
-      const compressed = await buildCompressedCalendarImage(src, helperPage, timeoutMs);
+      const compressed = await buildCompressedCalendarImage(src, helperPage, timeoutMs, stats);
       if (compressed) {
         replacements[src] = compressed;
       }
@@ -576,6 +585,7 @@ async function compressCalendarImages(browser, page, timeoutMs) {
         uniqueSources: uniqueSources.length,
         compressedSources: 0,
         replacedImages: 0,
+        stats,
       });
       return;
     }
@@ -599,23 +609,26 @@ async function compressCalendarImages(browser, page, timeoutMs) {
       uniqueSources: uniqueSources.length,
       compressedSources: Object.keys(replacements).length,
       replacedImages,
+      stats,
     });
   } finally {
     await helperPage.close();
   }
 }
 
-async function buildCompressedCalendarImage(src, helperPage, timeoutMs) {
+async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
   let response;
   try {
     response = await fetch(src, {
       signal: AbortSignal.timeout(Math.min(timeoutMs, 20000)),
     });
   } catch (_error) {
+    stats.fetch_failed += 1;
     return null;
   }
 
   if (!response.ok) {
+    stats.non_ok_response += 1;
     return null;
   }
 
@@ -624,15 +637,18 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs) {
   try {
     arrayBuffer = await response.arrayBuffer();
   } catch (_error) {
+    stats.empty_payload += 1;
     return null;
   }
 
   if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    stats.empty_payload += 1;
     return null;
   }
 
   const normalizedContentType = resolveImageContentType(src, contentType, arrayBuffer);
   if (!normalizedContentType) {
+    stats.unsupported_type += 1;
     return null;
   }
 
@@ -685,11 +701,14 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs) {
     });
 
     if (typeof compressed === 'string' && compressed.length > 0) {
+      stats.compressed += 1;
       return compressed;
     }
 
+    stats.canvas_empty += 1;
     return null;
   } catch (_error) {
+    stats.canvas_failed += 1;
     return null;
   }
 }
