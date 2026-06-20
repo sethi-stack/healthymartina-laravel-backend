@@ -563,6 +563,7 @@ async function compressCalendarImages(browser, page, timeoutMs) {
     canvas_empty: 0,
     compressed: 0,
   };
+  const failureSamples = [];
 
   try {
     await helperPage.setContent('<!doctype html><html><body></body></html>', {
@@ -572,7 +573,7 @@ async function compressCalendarImages(browser, page, timeoutMs) {
 
     const replacements = {};
     for (const src of uniqueSources) {
-      const compressed = await buildCompressedCalendarImage(src, helperPage, timeoutMs, stats);
+      const compressed = await buildCompressedCalendarImage(src, helperPage, timeoutMs, stats, failureSamples);
       if (compressed) {
         replacements[src] = compressed;
       }
@@ -586,6 +587,7 @@ async function compressCalendarImages(browser, page, timeoutMs) {
         compressedSources: 0,
         replacedImages: 0,
         stats,
+        failureSamples,
       });
       return;
     }
@@ -610,13 +612,14 @@ async function compressCalendarImages(browser, page, timeoutMs) {
       compressedSources: Object.keys(replacements).length,
       replacedImages,
       stats,
+      failureSamples,
     });
   } finally {
     await helperPage.close();
   }
 }
 
-async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
+async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats, failureSamples) {
   let response;
   try {
     response = await fetch(src, {
@@ -624,11 +627,15 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
     });
   } catch (_error) {
     stats.fetch_failed += 1;
+    recordCompressionFailure(failureSamples, src, 'fetch_failed');
     return null;
   }
 
   if (!response.ok) {
     stats.non_ok_response += 1;
+    recordCompressionFailure(failureSamples, src, 'non_ok_response', {
+      status: response.status,
+    });
     return null;
   }
 
@@ -638,17 +645,22 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
     arrayBuffer = await response.arrayBuffer();
   } catch (_error) {
     stats.empty_payload += 1;
+    recordCompressionFailure(failureSamples, src, 'empty_payload_read_failed');
     return null;
   }
 
   if (!arrayBuffer || arrayBuffer.byteLength === 0) {
     stats.empty_payload += 1;
+    recordCompressionFailure(failureSamples, src, 'empty_payload');
     return null;
   }
 
   const normalizedContentType = resolveImageContentType(src, contentType, arrayBuffer);
   if (!normalizedContentType) {
     stats.unsupported_type += 1;
+    recordCompressionFailure(failureSamples, src, 'unsupported_type', {
+      contentType,
+    });
     return null;
   }
 
@@ -677,7 +689,10 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
         canvas.height = height;
         const context = canvas.getContext('2d', { alpha: false });
         if (!context) {
-          return null;
+          return {
+            ok: false,
+            reason: 'no_canvas_context',
+          };
         }
 
         context.fillStyle = '#ffffff';
@@ -695,7 +710,12 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
         context.imageSmoothingQuality = 'high';
         context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
-        return canvas.toDataURL('image/jpeg', quality);
+        return {
+          ok: true,
+          dataUrl: canvas.toDataURL('image/jpeg', quality),
+          width: image.naturalWidth || width,
+          height: image.naturalHeight || height,
+        };
       } finally {
         URL.revokeObjectURL(objectUrl);
       }
@@ -707,17 +727,40 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
       quality: 0.68,
     });
 
-    if (typeof compressed === 'string' && compressed.length > 0) {
+    if (compressed?.ok && typeof compressed.dataUrl === 'string' && compressed.dataUrl.length > 0) {
       stats.compressed += 1;
-      return compressed;
+      return compressed.dataUrl;
     }
 
     stats.canvas_empty += 1;
+    recordCompressionFailure(failureSamples, src, compressed?.reason || 'canvas_empty', {
+      contentType: normalizedContentType,
+      originalBytes: arrayBuffer.byteLength,
+      width: compressed?.width,
+      height: compressed?.height,
+    });
     return null;
-  } catch (_error) {
+  } catch (error) {
     stats.canvas_failed += 1;
+    recordCompressionFailure(failureSamples, src, 'canvas_failed', {
+      contentType: normalizedContentType,
+      originalBytes: arrayBuffer.byteLength,
+      error: String(error?.message || error || ''),
+    });
     return null;
   }
+}
+
+function recordCompressionFailure(failureSamples, src, reason, extra = {}) {
+  if (!Array.isArray(failureSamples) || failureSamples.length >= 5) {
+    return;
+  }
+
+  failureSamples.push({
+    reason,
+    src: String(src || '').split('?')[0],
+    ...extra,
+  });
 }
 
 function resolveImageContentType(src, contentType, arrayBuffer) {
