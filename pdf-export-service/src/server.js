@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
 const puppeteer = require('puppeteer');
+const sharp = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const { renderLegacyBoldDocument } = require('./templates/legacy');
 
@@ -561,6 +562,8 @@ async function compressCalendarImages(browser, page, timeoutMs) {
     unsupported_type: 0,
     canvas_failed: 0,
     canvas_empty: 0,
+    sharp_fallback_success: 0,
+    sharp_fallback_failed: 0,
     compressed: 0,
   };
   const failureSamples = [];
@@ -733,6 +736,14 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats, f
     }
 
     stats.canvas_empty += 1;
+    const sharpCompressed = await buildCompressedCalendarImageWithSharp(
+      arrayBuffer,
+      normalizedContentType,
+      stats,
+    );
+    if (sharpCompressed) {
+      return sharpCompressed;
+    }
     recordCompressionFailure(failureSamples, src, compressed?.reason || 'canvas_empty', {
       contentType: normalizedContentType,
       originalBytes: arrayBuffer.byteLength,
@@ -742,11 +753,41 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats, f
     return null;
   } catch (error) {
     stats.canvas_failed += 1;
+    const sharpCompressed = await buildCompressedCalendarImageWithSharp(
+      arrayBuffer,
+      normalizedContentType,
+      stats,
+    );
+    if (sharpCompressed) {
+      return sharpCompressed;
+    }
     recordCompressionFailure(failureSamples, src, 'canvas_failed', {
       contentType: normalizedContentType,
       originalBytes: arrayBuffer.byteLength,
       error: String(error?.message || error || ''),
     });
+    return null;
+  }
+}
+
+async function buildCompressedCalendarImageWithSharp(arrayBuffer, contentType, stats) {
+  try {
+    const outputBuffer = await sharp(Buffer.from(arrayBuffer))
+      .resize(124, 72, { fit: 'cover', position: 'centre' })
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality: 68, mozjpeg: true })
+      .toBuffer();
+
+    if (!outputBuffer || outputBuffer.length === 0) {
+      stats.sharp_fallback_failed += 1;
+      return null;
+    }
+
+    stats.sharp_fallback_success += 1;
+    stats.compressed += 1;
+    return `data:${contentType || 'image/jpeg'};base64,${outputBuffer.toString('base64')}`;
+  } catch (_error) {
+    stats.sharp_fallback_failed += 1;
     return null;
   }
 }
