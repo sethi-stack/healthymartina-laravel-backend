@@ -652,49 +652,56 @@ async function buildCompressedCalendarImage(src, helperPage, timeoutMs, stats) {
     return null;
   }
 
-  const sourceDataUrl = `data:${normalizedContentType};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+  const sourceBytes = Array.from(new Uint8Array(arrayBuffer));
 
   try {
-    const compressed = await helperPage.evaluate(async ({ dataUrl, width, height, quality }) => {
+    const compressed = await helperPage.evaluate(async ({ bytes, contentType, width, height, quality }) => {
+      const blob = new Blob([new Uint8Array(bytes)], { type: contentType });
+      const objectUrl = URL.createObjectURL(blob);
       const image = new Image();
-      image.decoding = 'sync';
-      image.loading = 'eager';
-      image.src = dataUrl;
-      if (typeof image.decode === 'function') {
-        await image.decode();
-      } else {
-        await new Promise((resolve, reject) => {
-          image.onload = resolve;
-          image.onerror = reject;
-        });
+      try {
+        image.decoding = 'sync';
+        image.loading = 'eager';
+        image.src = objectUrl;
+        if (typeof image.decode === 'function') {
+          await image.decode();
+        } else {
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = reject;
+          });
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d', { alpha: false });
+        if (!context) {
+          return null;
+        }
+
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+
+        const sourceWidth = image.naturalWidth || width;
+        const sourceHeight = image.naturalHeight || height;
+        const scale = Math.max(width / sourceWidth, height / sourceHeight);
+        const drawWidth = sourceWidth * scale;
+        const drawHeight = sourceHeight * scale;
+        const offsetX = (width - drawWidth) / 2;
+        const offsetY = (height - drawHeight) / 2;
+
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+        return canvas.toDataURL('image/jpeg', quality);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
       }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const context = canvas.getContext('2d', { alpha: false });
-      if (!context) {
-        return null;
-      }
-
-      context.fillStyle = '#ffffff';
-      context.fillRect(0, 0, width, height);
-
-      const sourceWidth = image.naturalWidth || width;
-      const sourceHeight = image.naturalHeight || height;
-      const scale = Math.max(width / sourceWidth, height / sourceHeight);
-      const drawWidth = sourceWidth * scale;
-      const drawHeight = sourceHeight * scale;
-      const offsetX = (width - drawWidth) / 2;
-      const offsetY = (height - drawHeight) / 2;
-
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
-
-      return canvas.toDataURL('image/jpeg', quality);
     }, {
-      dataUrl: sourceDataUrl,
+      bytes: sourceBytes,
+      contentType: normalizedContentType,
       width: 124,
       height: 72,
       quality: 0.68,
