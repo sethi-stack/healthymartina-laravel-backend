@@ -37,8 +37,8 @@ function renderCoverStyles() {
   .cover-logo{
     order:5;
     margin-top:8px;
-    height:9mm;
-    max-width:30mm;
+    height:18mm;
+    max-width:60mm;
     object-fit:contain;
     display:block;
   }
@@ -60,14 +60,14 @@ function renderCoverStyles() {
     margin:0 0 8px;
   }
   .cover-brand{
-    font-size:11px;
+    font-size:21px;
     line-height:1.08;
     font-weight:700;
     color:var(--hm-brand-color);
     margin-bottom:6px;
   }
   .cover-email{
-    font-size:11px;
+    font-size:21px;
     line-height:1.08;
     font-weight:800;
     color:#101010;
