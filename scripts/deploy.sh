@@ -13,6 +13,8 @@ PHP_FPM_SERVICE="php8.3-fpm"
 echo "==> Pulling latest code..."
 cd "$APP_DIR"
 git pull origin main
+CURRENT_SHA="$(git rev-parse HEAD)"
+echo "==> Deployed commit: $CURRENT_SHA"
 
 echo "==> Installing dependencies..."
 composer install --no-dev --optimize-autoloader --no-interaction
@@ -28,6 +30,19 @@ if [ -d "$PDF_SERVICE_DIR" ]; then
   fi
 
   npm ci --omit=dev
+
+  echo "==> Verifying PDF compression code is present..."
+  if grep -q "compressCalendarImages" "$PDF_SERVICE_DIR/src/server.js"; then
+    echo "    - server.js includes calendar image compression"
+  else
+    echo "    - WARNING: server.js does not include calendar image compression"
+  fi
+
+  if grep -q 'data-pdf-calendar-image="1"' "$PDF_SERVICE_DIR/src/templates/legacy/components/weeklyPlan.js"; then
+    echo "    - weeklyPlan.js includes calendar image marker"
+  else
+    echo "    - WARNING: weeklyPlan.js does not include calendar image marker"
+  fi
 else
   echo "==> PDF export service directory not found, skipping Node deploy step."
 fi
@@ -49,6 +64,11 @@ sudo systemctl reload "$PHP_FPM_SERVICE"
 if systemctl list-unit-files | grep -q '^pdf-export\.service'; then
   echo "==> Restarting PDF export service..."
   sudo systemctl restart pdf-export
+  sleep 2
+  echo "==> PDF export service status:"
+  sudo systemctl --no-pager --full status pdf-export | sed -n '1,18p'
+  echo "==> Recent PDF export service logs:"
+  sudo journalctl -u pdf-export -n 20 --no-pager
 fi
 
 echo "==> Done. $(date)"

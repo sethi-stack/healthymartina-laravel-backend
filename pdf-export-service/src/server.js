@@ -14,6 +14,7 @@ const EXPORT_SHARED_SECRET = process.env.EXPORT_SHARED_SECRET || '';
 const MAX_CONCURRENCY = Math.max(1, Number(process.env.EXPORT_MAX_CONCURRENCY || 2));
 const JOB_TIMEOUT_MS = Math.max(30_000, Number(process.env.EXPORT_JOB_TIMEOUT_MS || 180_000));
 const STORAGE_DIR = path.resolve(process.env.STORAGE_DIR || path.join(__dirname, '..', 'storage'));
+const CALENDAR_IMAGE_COMPRESSION_ENABLED = true;
 
 if (!fs.existsSync(STORAGE_DIR)) {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
@@ -569,18 +570,36 @@ async function compressCalendarImages(browser, page, timeoutMs) {
     }
 
     if (!Object.keys(replacements).length) {
+      // eslint-disable-next-line no-console
+      console.log('[pdf-export] calendar compression summary', {
+        totalImages: calendarImages.length,
+        uniqueSources: uniqueSources.length,
+        compressedSources: 0,
+        replacedImages: 0,
+      });
       return;
     }
 
-    await page.evaluate((replacementMap) => {
+    const replacedImages = await page.evaluate((replacementMap) => {
+      let replaced = 0;
       document.querySelectorAll('img[data-pdf-calendar-image="1"]').forEach((img) => {
         const originalSrc = img.getAttribute('src') || img.currentSrc || img.src || '';
         const replacement = replacementMap[originalSrc];
         if (replacement) {
           img.setAttribute('src', replacement);
+          replaced += 1;
         }
       });
+      return replaced;
     }, replacements);
+
+    // eslint-disable-next-line no-console
+    console.log('[pdf-export] calendar compression summary', {
+      totalImages: calendarImages.length,
+      uniqueSources: uniqueSources.length,
+      compressedSources: Object.keys(replacements).length,
+      replacedImages,
+    });
   } finally {
     await helperPage.close();
   }
@@ -949,4 +968,12 @@ function withTimeout(promise, timeoutMs, message) {
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`PDF export service listening on http://localhost:${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log('[pdf-export] startup', {
+    node: process.version,
+    port: PORT,
+    storageDir: STORAGE_DIR,
+    calendarImageCompression: CALENDAR_IMAGE_COMPRESSION_ENABLED,
+    hasCompressionHook: typeof compressCalendarImages === 'function',
+  });
 });
