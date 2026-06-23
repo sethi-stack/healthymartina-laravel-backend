@@ -6,9 +6,9 @@ class NutritionPreferenceSupport
 {
     public const RECIPE_PREFERENCES_CUSTOMIZED_KEY = '__recipe_preferences_customized';
 
-    public const RECIPE_DISPLAY_IDS = [94, 99, 96, 97, 180, 102, 103, 106, 107];
+    public const RECIPE_DISPLAY_IDS = [94, 99, 96, 97, 213, 180, 102, 103, 106, 107];
 
-    public const RECIPE_DEFAULT_IDS = [94, 99, 96, 97];
+    public const RECIPE_DEFAULT_IDS = [94, 99, 96, 97, 213];
 
     public static function getRecipeNutritionOptions(?array $storedInfo = null): array
     {
