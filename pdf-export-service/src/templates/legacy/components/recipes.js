@@ -3,11 +3,16 @@ const { renderFooter } = require("./footer");
 
 function renderRecipeStyles() {
     return `
+  .recipe-page-primary{padding-bottom:24mm}
+  .recipe-page-primary--compact{padding:10mm 10mm 18mm}
   .doc-header--recipe{border-bottom:0;margin-bottom:12px;text-align:center}
   .doc-header--recipe h1{margin:0;font-size:16px;letter-spacing:.02em;text-transform:uppercase;color:var(--hm-brand-color)}
   .recipe-subtitle{margin-top:6px;font-size:12px;color:#000}
   .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 12px;position:relative}
-  .recipe-page-primary--compact .recipe-top-image{height:300pt}
+  .recipe-page-primary--compact .doc-header--recipe{margin-bottom:8px}
+  .recipe-page-primary--compact .doc-header--recipe h1{font-size:15px}
+  .recipe-page-primary--compact .recipe-subtitle{margin-top:4px;font-size:11px}
+  .recipe-page-primary--compact .recipe-top-image{height:248pt;margin-bottom:8px}
   .recipe-page-primary{position:relative}
   .recipe-page-primary::before{
     content:'';
@@ -20,18 +25,22 @@ function renderRecipeStyles() {
     pointer-events:none;
     z-index:0;
   }
-  .recipe-page-primary--compact::before{height:300pt}
+  .recipe-page-primary--compact::before{height:248pt}
   .recipe-page-primary > *{position:relative;z-index:1}
   .recipe-top-image img{width:100%;height:100%;object-fit:cover;display:block}
   .recipe-content-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;align-items:start}
   .recipe-content-grid-top{margin-bottom:20mm}
+  .recipe-page-primary--compact .recipe-content-grid{gap:10px 16px}
+  .recipe-page-primary--compact .recipe-content-grid-top{margin-bottom:8mm}
   .recipe-content-grid-inline-secondary{margin-top:8mm;margin-bottom:20mm}
   .recipe-content-grid-bottom{margin-bottom:20mm}
   .recipe-content-grid-bottom--single{grid-template-columns:1fr;gap:8px;margin-bottom:8mm}
   .recipe-content-grid-bottom--stacked{margin-top:4mm;margin-bottom:16mm}
   .recipe-grid-card{break-inside:avoid;page-break-inside:avoid;min-height:120px;padding-right:4px}
+  .recipe-page-primary--compact .recipe-grid-card{min-height:0;padding-right:2px}
   .recipe-content-grid-bottom--single .recipe-grid-card{min-height:0}
   .recipe-grid-card .section-title{margin-top:0;font-size:12px}
+  .recipe-page-primary--compact .recipe-grid-card .section-title{font-size:11px;margin-bottom:5px}
   .recipe-grid-card p{margin:0;font-size:10px;line-height:1.35}
   .tip-block{margin:0 0 12px;padding:2px 0}
   .tip-title{margin:0 0 4px;font-size:11px;line-height:1.2;font-weight:700;color:var(--hm-brand-color)}
@@ -42,6 +51,11 @@ function renderRecipeStyles() {
   .ingredient-list .ing-name{color:#000;font-size:11px}
   .instruction-list{padding-left:20px;list-style:decimal}
   .instruction-list li{font-size:12px;line-height:1.42;padding-left:2px}
+  .recipe-page-primary--compact .ingredient-list li{grid-template-columns:84px 1fr;gap:10px;padding:1px 0;margin-bottom:5px;font-size:10px;line-height:1.24}
+  .recipe-page-primary--compact .ingredient-list .ing-amount,
+  .recipe-page-primary--compact .ingredient-list .ing-name{font-size:10px}
+  .recipe-page-primary--compact .instruction-list{padding-left:18px}
+  .recipe-page-primary--compact .instruction-list li{font-size:11px;line-height:1.28;margin-bottom:5px}
   .nutrition-table{width:100%;border-collapse:collapse;font-size:9px}.nutrition-table td{padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06)}`;
 }
 
@@ -187,7 +201,6 @@ function renderRecipes(model, options = {}) {
             ? options.onRecipeRendered
             : null;
     const recipes = model.recipes || [];
-    const footer = renderFooter(model);
     if (!recipes.length) return "";
 
     return recipes
@@ -299,6 +312,8 @@ function renderRecipes(model, options = {}) {
             const metaLine = [metaPorciones, metaMinutos]
                 .filter(Boolean)
                 .join("  ");
+            const primaryFooter = renderFooter(model, { compact: useCompactPrimary });
+            const footer = renderFooter(model);
 
             return `<section class="pdf-page section-break recipe-page-primary${useCompactPrimary ? " recipe-page-primary--compact" : ""}">
       <div class="doc-header doc-header--recipe">
@@ -316,7 +331,7 @@ function renderRecipes(model, options = {}) {
           <ol class="instruction-list" start="${primaryInstructionStart}">${renderInstructionItems(primaryInstructions)}</ol>
         </article>
       </div>
-      ${footer}
+      ${primaryFooter}
     </section>${
         needsPrimaryDetailsPage
             ? `
