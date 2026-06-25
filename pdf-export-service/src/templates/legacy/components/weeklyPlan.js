@@ -70,7 +70,15 @@ function renderWeeklyPlan(model) {
 
         const description = items
           .map((item) => {
-            const qty = item.racion && Number(item.racion) > 1 ? `x${esc(item.racion)} ` : '';
+            const numericRacion = Number(item.racion);
+            const qty =
+              item.racion !== null &&
+              item.racion !== undefined &&
+              item.racion !== '' &&
+              Number.isFinite(numericRacion) &&
+              numericRacion !== 1
+                ? `x${esc(item.racion)} `
+                : '';
             const cls = item.leftover ? 'item-taken' : '';
             return `<span class="${cls}">${qty}${esc(item.title)}</span>`;
           })
