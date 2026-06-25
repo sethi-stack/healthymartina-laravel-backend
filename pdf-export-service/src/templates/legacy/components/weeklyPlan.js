@@ -47,8 +47,8 @@ function estimateCalendarDensity(days, mealOrder) {
 function renderWeeklyPlan(model) {
   if (!model.weeklyPlan?.days?.length) return '';
 
-  const dayLabels = dayDefaultLabels();
-  const mealLabels = mealDefaultLabels();
+  const dayLabels = { ...dayDefaultLabels(), ...(model.weeklyPlan?.dayLabels || {}) };
+  const mealLabels = { ...mealDefaultLabels(), ...(model.weeklyPlan?.mealLabels || {}) };
   const days = model.weeklyPlan.days;
   const mealOrder = ['meal_1', 'meal_2', 'meal_3', 'meal_4', 'meal_5', 'meal_6'];
   const denseMode = estimateCalendarDensity(days, mealOrder) >= 31;
@@ -56,7 +56,8 @@ function renderWeeklyPlan(model) {
   const dayCards = days.map((d) => {
     const mealBlocks = mealOrder
       .map((mealKey) => {
-        const items = d.meals?.[mealKey] || [];
+        const meal = d.meals?.[mealKey] || null;
+        const items = meal?.items || [];
         if (!items.length) return '';
 
         const images = items
@@ -78,7 +79,7 @@ function renderWeeklyPlan(model) {
         return `<div class="meal-row">
           <div class="meal-images">${images || '<div class="meal-image-fallback"></div>'}</div>
           <div class="meal-copy">
-            <div class="meal-name">${esc(mealLabels[mealKey] || mealKey)}</div>
+            <div class="meal-name">${esc(meal?.label || mealLabels[mealKey] || mealKey)}</div>
             <div class="meal-desc">${description}</div>
           </div>
         </div>`;
@@ -87,7 +88,7 @@ function renderWeeklyPlan(model) {
       .join('');
 
     return `<article class="day-card">
-      <h3 class="day-title">${esc(dayLabels[d.dayKey] || d.dayKey)}</h3>
+      <h3 class="day-title">${esc(d.label || dayLabels[d.dayKey] || d.dayKey)}</h3>
       ${mealBlocks}
     </article>`;
   }).join('');

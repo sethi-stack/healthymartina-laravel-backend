@@ -115,11 +115,19 @@ function buildLegacyBoldModel(job) {
       }
 
       if (items.length) {
-        mealEntries[mealKey] = items;
+        mealEntries[mealKey] = {
+          key: mealKey,
+          label: mealLabels[mealKey] || mealKey,
+          items,
+        };
       }
     });
 
-    return { dayKey, meals: mealEntries };
+    return {
+      dayKey,
+      label: dayLabels[dayKey] || dayKey,
+      meals: mealEntries,
+    };
   });
 
   const categories = (payload.listaData?.categories || []).map((cat) => ({
@@ -166,7 +174,11 @@ function buildLegacyBoldModel(job) {
       brandLogo: payload.brandLogo || '',
       brandColor: payload.brandColor || '#36544e',
     },
-    weeklyPlan: { days },
+    weeklyPlan: {
+      days,
+      dayLabels,
+      mealLabels,
+    },
     nutritionSummary: { days: nutritionDays },
     lista: { categories, takenIds: payload.listaData?.taken_ids || [] },
     recipes,
