@@ -584,7 +584,14 @@ class CalendarPdfController extends Controller
         $mainLeftovers = json_decode($calendar->main_leftovers, true) ?? [];
         $sidesLeftovers = json_decode($calendar->sides_leftovers, true) ?? [];
         $labels = json_decode($calendar->labels, true) ?? [];
-        [$calendarRecipeIds] = $this->collectCalendarRecipeIds($mainSchedule, $sidesSchedule, $mainServings, $sidesServings);
+        [$calendarRecipeIds] = $this->collectCalendarRecipeIds(
+            $mainSchedule,
+            $sidesSchedule,
+            $mainServings,
+            $sidesServings,
+            $mainRacion,
+            $sidesRacion
+        );
         $selected = array_values(array_filter(array_map('intval', $validated['selected_recipes'] ?? [])));
         $heroRecipeId = !empty($validated['hero_recipe_id']) ? (int) $validated['hero_recipe_id'] : null;
         if (empty($selected)) {
@@ -869,7 +876,14 @@ class CalendarPdfController extends Controller
             'meal_6' => 'Otros',
         ];
 
-        [$calendarRecipeIds, $recipeMeta] = $this->collectCalendarRecipeIds($mainSchedule, $sidesSchedule, $mainServings, $sidesServings);
+        [$calendarRecipeIds, $recipeMeta] = $this->collectCalendarRecipeIds(
+            $mainSchedule,
+            $sidesSchedule,
+            $mainServings,
+            $sidesServings,
+            $mainRacion,
+            $sidesRacion
+        );
 
         $selectedRecipeIds = array_values(array_filter(array_map('intval', $selectedRecipeIds ?? [])));
         if (empty($selectedRecipeIds)) {
@@ -1241,7 +1255,14 @@ class CalendarPdfController extends Controller
             ];
         })->all();
 
-        [$calendarRecipeIds, $recipeMeta] = $this->collectCalendarRecipeIds($mainSchedule, $sidesSchedule, $mainServings, $sidesServings);
+        [$calendarRecipeIds, $recipeMeta] = $this->collectCalendarRecipeIds(
+            $mainSchedule,
+            $sidesSchedule,
+            $mainServings,
+            $sidesServings,
+            $mainRacion,
+            $sidesRacion
+        );
         [$recipeIngredientsByRecipe, $recipeIngredientsFlat] = $this->buildLegacyRecipeIngredientMaps($payload['recipePages'] ?? []);
 
         return [
@@ -1402,7 +1423,14 @@ SVG;
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    private function collectCalendarRecipeIds(array $mainSchedule, array $sidesSchedule, array $mainServings, array $sidesServings): array
+    private function collectCalendarRecipeIds(
+        array $mainSchedule,
+        array $sidesSchedule,
+        array $mainServings,
+        array $sidesServings,
+        array $mainRacion = [],
+        array $sidesRacion = []
+    ): array
     {
         $ordered = [];
         $meta = [];
@@ -1410,7 +1438,9 @@ SVG;
         foreach ($mainSchedule as $dayKey => $meals) {
             foreach ($meals as $mealKey => $recipeId) {
                 if ($recipeId && !isset($meta[$recipeId])) {
-                    $portion = $mainServings[$dayKey][$mealKey] ?? 1;
+                    $portion = $mainRacion[$dayKey][$mealKey]
+                        ?? $mainServings[$dayKey][$mealKey]
+                        ?? 1;
                     $ordered[] = (int) $recipeId;
                     $meta[(int) $recipeId] = [
                         'portion' => $portion,
@@ -1422,7 +1452,9 @@ SVG;
 
                 $sideId = $sidesSchedule[$dayKey][$mealKey] ?? null;
                 if ($sideId && !isset($meta[$sideId])) {
-                    $portion = $sidesServings[$dayKey][$mealKey] ?? 1;
+                    $portion = $sidesRacion[$dayKey][$mealKey]
+                        ?? $sidesServings[$dayKey][$mealKey]
+                        ?? 1;
                     $ordered[] = (int) $sideId;
                     $meta[(int) $sideId] = [
                         'portion' => $portion,
