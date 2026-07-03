@@ -5,7 +5,7 @@ const DEFAULT_CALENDAR_FOOTER_THUMBNAIL_THRESHOLD = 5;
 
 function renderWeeklyPlanStyles() {
   return `
-  .calendar-page{padding-bottom:12mm}
+  .calendar-page{padding:6mm 12mm 12mm}
   .calendar-page--with-footer{padding-bottom:22mm}
   .weekly-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 20px}
   .day-card{break-inside:avoid;page-break-inside:avoid}
@@ -18,9 +18,9 @@ function renderWeeklyPlanStyles() {
   .meal-copy{min-width:0;flex:1}
   .meal-name{font-size:11px;font-weight:800;color:var(--hm-brand-color);text-transform:uppercase;margin-bottom:2px}
   .meal-desc{font-size:8px;line-height:1.24;color:#111}
-  .calendar-page .section-title{margin:8px 0 5px}
-  .calendar-page--dense{padding:9mm 9mm 14mm}
-  .calendar-page--dense .section-title{margin:6px 0 5px;font-size:10.5px}
+  .calendar-page .section-title{margin:4px 0 4px}
+  .calendar-page--dense{padding:4mm 9mm 10mm}
+  .calendar-page--dense .section-title{margin:3px 0 4px;font-size:10.5px}
   .calendar-page--dense .weekly-grid{gap:8px 14px}
   .calendar-page--dense .day-title{margin-bottom:5px;font-size:13px}
   .calendar-page--dense .meal-row{gap:5px;margin-bottom:4px}
@@ -29,7 +29,7 @@ function renderWeeklyPlanStyles() {
   .calendar-page--dense .meal-image-fallback{width:50px;height:29px}
   .calendar-page--dense .meal-name{font-size:9px;margin-bottom:1px}
   .calendar-page--dense .meal-desc{font-size:6.9px;line-height:1.12}
-  .calendar-page--dense.calendar-page--with-footer{padding:9mm 9mm 14mm}`;
+  .calendar-page--dense.calendar-page--with-footer{padding:4mm 9mm 10mm}`;
 }
 
 function countFirstColumnThumbnails(days, mealOrder) {
