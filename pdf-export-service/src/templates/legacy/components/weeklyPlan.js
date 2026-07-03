@@ -1,9 +1,12 @@
 const { esc, dayDefaultLabels, mealDefaultLabels } = require('./utils');
 const { renderFooter } = require('./footer');
 
+const DEFAULT_CALENDAR_FOOTER_THUMBNAIL_THRESHOLD = 5;
+
 function renderWeeklyPlanStyles() {
   return `
-  .calendar-page{padding-bottom:22mm}
+  .calendar-page{padding-bottom:12mm}
+  .calendar-page--with-footer{padding-bottom:22mm}
   .weekly-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 20px}
   .day-card{break-inside:avoid;page-break-inside:avoid}
   .day-title{margin:0 0 7px;font-size:16px;line-height:1;font-weight:800;color:var(--hm-brand-color);text-transform:uppercase}
@@ -24,7 +27,33 @@ function renderWeeklyPlanStyles() {
   .calendar-page--dense .meal-images img,
   .calendar-page--dense .meal-image-fallback{width:50px;height:29px}
   .calendar-page--dense .meal-name{font-size:9px;margin-bottom:1px}
-  .calendar-page--dense .meal-desc{font-size:6.9px;line-height:1.12}`;
+  .calendar-page--dense .meal-desc{font-size:6.9px;line-height:1.12}
+  .calendar-page--dense.calendar-page--with-footer{padding:9mm 9mm 14mm}`;
+}
+
+function countFirstColumnThumbnails(days, mealOrder) {
+  return days.reduce((count, day, index) => {
+    if (index % 3 !== 0) return count;
+
+    const dayCount = mealOrder.reduce((acc, mealKey) => {
+      const items = day.meals?.[mealKey] || [];
+      return acc + items.filter((item) => !!item.image).length;
+    }, 0);
+
+    return count + dayCount;
+  }, 0);
+}
+
+function shouldRenderCalendarFooter(model) {
+  const days = Array.isArray(model?.weeklyPlan?.days) ? model.weeklyPlan.days : [];
+  const mealOrder = ['meal_1', 'meal_2', 'meal_3', 'meal_4', 'meal_5', 'meal_6'];
+  const thumbnailCount = countFirstColumnThumbnails(days, mealOrder);
+  const thresholdRaw = Number(model?.calendarFooterThumbnailThreshold);
+  const threshold = Number.isFinite(thresholdRaw) && thresholdRaw > 0
+    ? thresholdRaw
+    : DEFAULT_CALENDAR_FOOTER_THUMBNAIL_THRESHOLD;
+
+  return thumbnailCount < threshold;
 }
 
 function estimateCalendarDensity(days, mealOrder) {
@@ -52,6 +81,7 @@ function renderWeeklyPlan(model) {
   const days = model.weeklyPlan.days;
   const mealOrder = ['meal_1', 'meal_2', 'meal_3', 'meal_4', 'meal_5', 'meal_6'];
   const denseMode = estimateCalendarDensity(days, mealOrder) >= 28;
+  const showFooter = shouldRenderCalendarFooter(model);
 
   const dayCards = days.map((d) => {
     const mealBlocks = mealOrder
@@ -101,11 +131,17 @@ function renderWeeklyPlan(model) {
     </article>`;
   }).join('');
 
-  const pageClass = denseMode ? 'pdf-page section-break calendar-page calendar-page--dense' : 'pdf-page section-break calendar-page';
+  const pageClass = [
+    'pdf-page',
+    'section-break',
+    'calendar-page',
+    denseMode ? 'calendar-page--dense' : '',
+    showFooter ? 'calendar-page--with-footer' : '',
+  ].filter(Boolean).join(' ');
   return `<section class="${pageClass}">
     <div class="section-title">Calendario Semanal</div>
     <div class="weekly-grid">${dayCards}</div>
-    ${renderFooter(model, { compact: denseMode })}
+    ${showFooter ? renderFooter(model, { compact: denseMode }) : ''}
   </section>`;
 }
 
