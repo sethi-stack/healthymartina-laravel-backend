@@ -36,7 +36,9 @@ function countFirstColumnThumbnails(days, mealOrder) {
     if (index % 3 !== 0) return count;
 
     const dayCount = mealOrder.reduce((acc, mealKey) => {
-      const items = day.meals?.[mealKey] || [];
+      const items = Array.isArray(day.meals?.[mealKey]?.items)
+        ? day.meals[mealKey].items
+        : [];
       return acc + items.filter((item) => !!item.image).length;
     }, 0);
 
