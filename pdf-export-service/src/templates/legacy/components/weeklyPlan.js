@@ -18,6 +18,7 @@ function renderWeeklyPlanStyles() {
   .meal-copy{min-width:0;flex:1}
   .meal-name{font-size:11px;font-weight:800;color:var(--hm-brand-color);text-transform:uppercase;margin-bottom:2px}
   .meal-desc{font-size:8px;line-height:1.24;color:#111}
+  .calendar-page .section-title{margin:8px 0 5px}
   .calendar-page--dense{padding:9mm 9mm 14mm}
   .calendar-page--dense .section-title{margin:6px 0 5px;font-size:10.5px}
   .calendar-page--dense .weekly-grid{gap:8px 14px}
