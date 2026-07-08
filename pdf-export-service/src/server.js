@@ -309,6 +309,20 @@ app.post('/jobs', requireSignedRequest, (req, res) => {
 
   job.stage.message = buildLegacyStageMessage(job);
 
+  console.log('[pdf-export] job received', {
+    job_id: job.id,
+    calendar_id: job.calendarId,
+    selected_recipes: Array.isArray(body.payload?.selected_recipes)
+      ? body.payload.selected_recipes.length
+      : 0,
+    recipe_pages: Array.isArray(body.payload?.recipePages)
+      ? body.payload.recipePages.map((page) => ({
+          recipe_id: page?.recipe?.id ?? null,
+          portion: page?.portion ?? null,
+        }))
+      : [],
+  });
+
   jobs.set(job.id, job);
   queue.push(job.id);
   processQueue();
@@ -449,6 +463,15 @@ async function generatePdf(job) {
   const { html, model } = renderLegacyBoldDocument(job);
   job.rendered_model = model;
   job.rendered_html_bytes = Buffer.byteLength(html, 'utf8');
+  console.log('[pdf-export] render model summary', {
+    job_id: job.id,
+    recipe_pages: Array.isArray(model?.recipes)
+      ? model.recipes.map((recipe) => ({
+          title: recipe.title,
+          porciones: recipe.porciones,
+        }))
+      : [],
+  });
   if (job.counters.total_recipe_pages <= 0 && Array.isArray(model?.recipes)) {
     job.counters.total_recipe_pages = model.recipes.length;
   }

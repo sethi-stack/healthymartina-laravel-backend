@@ -147,7 +147,11 @@ function buildRecipes(model) {
     return {
       title: recipe.titulo || 'Receta',
       image: recipe.imagen_principal || model.placeholderImage || '',
-      porciones: recipe.porciones != null ? Number(recipe.porciones) : null,
+      porciones: page.portion != null
+        ? Number(page.portion)
+        : recipe.porciones != null
+          ? Number(recipe.porciones)
+          : null,
       minutos: recipe.tiempo_elaboracion != null ? Number(recipe.tiempo_elaboracion) : null,
       ingredients: (page.ingredients || []).map((item) => ({
         name: item.ingrediente || item.nombre || 'Ingrediente',

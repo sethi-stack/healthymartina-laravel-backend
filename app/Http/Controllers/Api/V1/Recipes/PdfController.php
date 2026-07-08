@@ -29,7 +29,68 @@ class PdfController extends Controller
         }, array_values(NutritionPreferenceSupport::normalizeNutritionInfo($storedNutritionInfo)));
     }
 
-    private function buildRecipePdf(Receta $recipe, $nutritionalsInfo, $user)
+    private function formatRecipeIngredient(array $ingredient): string
+    {
+        $quantity = $ingredient['cantidad'] ?? '';
+        $measure = '';
+
+        if ($quantity !== '' && is_numeric($quantity) && (float) $quantity > 1) {
+            $measure = $ingredient['medida_plural'] ?? ($ingredient['medida'] ?? '');
+        } else {
+            $measure = $ingredient['medida'] ?? '';
+        }
+
+        $parts = [];
+        if ($quantity !== '') {
+            $parts[] = $quantity;
+        }
+        if ($measure !== '') {
+            $parts[] = mb_strtolower($measure);
+        }
+
+        return trim(implode(' ', $parts));
+    }
+
+    private function scaleRecipeIngredients(Receta $recipe, float|int $portion): array
+    {
+        $ingredients = $recipe->getIngredientes(true);
+        $basePortion = max(1, (float) ($recipe->getPorciones()['cantidad'] ?? 1));
+        $ratio = max(0, (float) $portion) / $basePortion;
+
+        return array_map(function (array $ingredient) use ($ratio) {
+            if (isset($ingredient['cantidad']) && is_numeric($ingredient['cantidad'])) {
+                $scaled = (float) $ingredient['cantidad'] * $ratio;
+                $ingredient['cantidad'] = rtrim(rtrim(number_format($scaled, 2, '.', ''), '0'), '.');
+            }
+
+            return $ingredient;
+        }, $ingredients);
+    }
+
+    private function scaleRecipeNutrition(Receta $recipe, float|int $portion): array
+    {
+        $nutrition = $recipe->getInformacionNutrimental();
+        $basePortion = max(1, (float) ($recipe->getPorciones()['cantidad'] ?? 1));
+        $ratio = max(0, (float) $portion) / $basePortion;
+
+        if (!isset($nutrition['info']) || !is_array($nutrition['info'])) {
+            return $nutrition;
+        }
+
+        foreach ($nutrition['info'] as $nutrientId => $nutrientInfo) {
+            if (isset($nutrientInfo['cantidad']) && is_numeric($nutrientInfo['cantidad'])) {
+                $nutrition['info'][$nutrientId]['cantidad'] = $nutrientInfo['cantidad'] * $ratio;
+            }
+
+            if (isset($nutrientInfo['porcentaje']) && is_numeric($nutrientInfo['porcentaje'])) {
+                $nutrition['info'][$nutrientId]['porcentaje'] = $nutrientInfo['porcentaje'] * $ratio;
+            }
+        }
+
+        return $nutrition;
+    }
+
+    private function buildRecipePdf(Receta $recipe, $nutritionalsInfo, $user, float|int $portion)
     {
         $recipeImageSrc = $recipe->imagen_principal;
         $rawImagePath = $recipe->getRawOriginal('imagen_principal');
@@ -51,12 +112,26 @@ class PdfController extends Controller
             }
         }
 
+        $scaledIngredients = $this->scaleRecipeIngredients($recipe, $portion);
+        $scaledNutrition = $this->scaleRecipeNutrition($recipe, $portion);
+        $recipeIngredientsData = [];
+        foreach ($scaledIngredients as $ingredient) {
+            $uid = $ingredient['ingred_uid'] ?? null;
+            if (!$uid) {
+                continue;
+            }
+            $recipeIngredientsData[$recipe->id][$uid] = $this->formatRecipeIngredient($ingredient);
+        }
+
         // Legacy parity: use Advanced/Bold recipe template by default.
         $viewData = [
             'recipe' => $recipe,
             'nutritionals_info' => $nutritionalsInfo,
             'export_param' => [3, 4], // include tips + nutrition blocks
-            'recipe_ingredients_data' => [],
+            'porcion' => $portion,
+            'portion' => $portion,
+            'recipe_ingredients_data' => $recipeIngredientsData,
+            'recipe_nutrition_data' => [$recipe->id => $scaledNutrition],
             'recipe_image_src' => $recipeImageSrc,
         ];
 
@@ -66,13 +141,17 @@ class PdfController extends Controller
     /**
      * Generate and download recipe PDF.
      */
-    public function download(int $recipeId)
+    public function download(Request $request, int $recipeId)
     {
+        $validated = $request->validate([
+            'portion' => 'nullable|numeric|min:1',
+        ]);
         $recipe = Receta::findOrFail($recipeId);
         $user = Auth::user();
         $nutritionals_info = $this->getUserNutritionalsInfo($user);
+        $portion = (float) ($validated['portion'] ?? $recipe->getPorciones()['cantidad'] ?? 1);
 
-        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user);
+        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user, $portion);
 
         return $pdf->download($recipe->titulo . '.pdf');
     }
@@ -85,10 +164,12 @@ class PdfController extends Controller
         $validated = $request->validate([
             'recipient_email_address' => 'nullable|email',
             'plantillas' => 'nullable|string',
+            'portion' => 'nullable|numeric|min:1',
         ]);
 
         $user = Auth::user();
         $recipe = Receta::findOrFail($recipeId);
+        $portion = (float) ($validated['portion'] ?? $recipe->getPorciones()['cantidad'] ?? 1);
         
         $recipient_email = $validated['recipient_email_address'] ?? $user->email;
 
@@ -101,7 +182,7 @@ class PdfController extends Controller
 
         $nutritionals_info = $this->getUserNutritionalsInfo($user);
 
-        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user);
+        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user, $portion);
 
         // Prepare email data
         $data = [

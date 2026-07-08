@@ -143,14 +143,30 @@ function buildLegacyBoldModel(job) {
   const recipes = recipePages.map((p) => ({
     title: p.recipe?.titulo || 'Receta',
     image: p.recipe?.imagen_principal || '',
-    porciones: p.recipe?.porciones != null ? Number(p.recipe.porciones) : null,
+    porciones: p.portion != null
+      ? Number(p.portion)
+      : p.recipe?.porciones != null
+        ? Number(p.recipe.porciones)
+        : null,
     minutos: p.recipe?.tiempo_elaboracion != null ? Number(p.recipe.tiempo_elaboracion) : null,
     ingredients: (p.ingredients || []).map((i) => ({ name: i.ingrediente || i.nombre || 'Ingrediente', amount: `${i.cantidad || ''} ${i.medida || i.unidad || ''}`.trim() })),
     instructions: p.recipe?.instrucciones || [],
-    nutrition: (p.nutrition || []).map((n) => ({ name: n.nombre || 'Nutriente', amount: `${n.cantidad || ''} ${n.unidad_medida || ''}`.trim() })),
+    nutrition: (p.nutrition || []).map((n) => ({
+      name: n.nombre || 'Nutriente',
+      amount: `${n.cantidad || ''} ${n.unidad_medida || ''}`.trim(),
+    })),
     tips: p.recipe?.tips || '',
     tipsBlocks: normalizeTipsBlocks(p.recipe?.tips),
   }));
+
+  console.log('[pdf-export] legacy model recipe pages', {
+    job_id: job.id,
+    recipe_pages: recipePages.map((page) => ({
+      recipe_id: page?.recipe?.id ?? null,
+      title: page?.recipe?.titulo || null,
+      portion: page?.portion ?? null,
+    })),
+  });
 
   const nutritionDays = (payload.nutritionByDay || []).map((day) => ({
     dayKey: day.day_key || '',

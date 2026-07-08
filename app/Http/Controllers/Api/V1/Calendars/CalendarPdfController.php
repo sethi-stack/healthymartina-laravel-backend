@@ -34,15 +34,16 @@ class CalendarPdfController extends Controller
         $this->prepareExportRuntimeLimits();
         $startedAt = microtime(true);
         try {
-            $validated = $request->validate([
-                'calendar'       => 'required|integer',
-                'export_param'   => 'required|array|min:1',
-                'export_param.*' => 'integer|in:1,2,4',
-                'template'       => 'nullable|in:classic,modern,bold,basic,advanced',
-                'hero_recipe_id' => 'nullable|integer',
-                'selected_recipes' => 'nullable|array',
-                'selected_recipes.*' => 'integer',
-            ]);
+        $validated = $request->validate([
+            'calendar'       => 'required|integer',
+            'export_param'   => 'required|array|min:1',
+            'export_param.*' => 'integer|in:1,2,4',
+            'template'       => 'nullable|in:classic,modern,bold,basic,advanced',
+            'hero_recipe_id' => 'nullable|integer',
+            'selected_recipes' => 'nullable|array',
+            'selected_recipes.*' => 'integer',
+            'recipe_portions' => 'nullable|array',
+        ]);
 
             $calendar = Auth::user()->calendars()->findOrFail($validated['calendar']);
 
@@ -159,6 +160,7 @@ class CalendarPdfController extends Controller
             'hero_recipe_id' => 'nullable|integer',
             'selected_recipes' => 'nullable|array',
             'selected_recipes.*' => 'integer',
+            'recipe_portions' => 'nullable|array',
             'recipient_email_address' => 'nullable|email',
             'plantillas' => 'nullable|string',
         ]);
@@ -247,6 +249,7 @@ class CalendarPdfController extends Controller
             'hero_recipe_id' => 'nullable|integer',
             'selected_recipes' => 'nullable|array',
             'selected_recipes.*' => 'integer',
+            'recipe_portions' => 'nullable|array',
             'recipient_email_address' => 'nullable|email',
             'delivery_mode' => 'nullable|in:download,email',
         ]);
@@ -272,6 +275,12 @@ class CalendarPdfController extends Controller
                 'export_param' => $payload['export_param'] ?? [],
                 'selected_recipes_count' => count($payload['selected_recipes'] ?? []),
                 'recipe_pages_count' => count($payload['recipePages'] ?? []),
+                'recipe_pages' => array_map(function (array $page) {
+                    return [
+                        'recipe_id' => $page['recipe']['id'] ?? null,
+                        'portion' => $page['portion'] ?? null,
+                    ];
+                }, $payload['recipePages'] ?? []),
                 'nutrition_days_count' => count($payload['nutritionByDay'] ?? []),
                 'lista_categories_count' => count($payload['listaData']['categories'] ?? []),
             ]);
@@ -339,6 +348,7 @@ class CalendarPdfController extends Controller
             'request_payload.hero_recipe_id' => 'nullable|integer',
             'request_payload.selected_recipes' => 'nullable|array',
             'request_payload.selected_recipes.*' => 'integer',
+            'request_payload.recipe_portions' => 'nullable|array',
         ]);
 
         Auth::onceUsingId((int) $validated['user_id']);
@@ -584,7 +594,7 @@ class CalendarPdfController extends Controller
         $mainLeftovers = json_decode($calendar->main_leftovers, true) ?? [];
         $sidesLeftovers = json_decode($calendar->sides_leftovers, true) ?? [];
         $labels = json_decode($calendar->labels, true) ?? [];
-        [$calendarRecipeIds] = $this->collectCalendarRecipeIds(
+        [$calendarRecipeIds, $recipeMeta] = $this->collectCalendarRecipeIds(
             $mainSchedule,
             $sidesSchedule,
             $mainServings,
@@ -593,6 +603,12 @@ class CalendarPdfController extends Controller
             $sidesRacion
         );
         $selected = array_values(array_filter(array_map('intval', $validated['selected_recipes'] ?? [])));
+        $requestedRecipePortions = [];
+        foreach (($validated['recipe_portions'] ?? []) as $recipeId => $portion) {
+            if (is_numeric($portion)) {
+                $requestedRecipePortions[(int) $recipeId] = (float) $portion;
+            }
+        }
         $heroRecipeId = !empty($validated['hero_recipe_id']) ? (int) $validated['hero_recipe_id'] : null;
         if (empty($selected)) {
             $selected = $calendarRecipeIds;
@@ -628,7 +644,10 @@ class CalendarPdfController extends Controller
                 continue;
             }
 
-            $portion = $recipe->getPorciones()['cantidad'] ?? 1;
+            $portion = $requestedRecipePortions[$recipeId]
+                ?? $recipeMeta[$recipeId]['portion']
+                ?? $recipe->getPorciones()['cantidad']
+                ?? 1;
             $ingredients = $this->scaleRecipeIngredients($recipe, $portion);
             $nutrition = $this->filterRecipeNutritionForExport(
                 $this->scaleRecipeNutrition($recipe, $portion)
@@ -654,6 +673,7 @@ class CalendarPdfController extends Controller
                     'instrucciones' => array_values($recipe->getInstrucciones() ?? []),
                     'tips' => implode(PHP_EOL, array_values($recipe->getTipsPlain() ?? [])),
                 ],
+                'portion' => $portion,
                 'ingredients' => array_map(function ($ingredient) {
                     return [
                         'ingrediente' => $ingredient['ingrediente'] ?? ($ingredient['nombre'] ?? 'Ingrediente'),
@@ -738,12 +758,17 @@ class CalendarPdfController extends Controller
                 $resolvedHeroRecipeId = $firstCalendarRecipeId;
             }
         }
+        $resolvedHeroRecipePortion = null;
+        if ($resolvedHeroRecipeId && isset($recipeMeta[$resolvedHeroRecipeId]['portion'])) {
+            $resolvedHeroRecipePortion = $recipeMeta[$resolvedHeroRecipeId]['portion'];
+        }
 
         return [
             'template' => $template,
             'delivery_mode' => (string) ($validated['delivery_mode'] ?? 'download'),
             'export_param' => $exportParams,
             'hero_recipe_id' => $resolvedHeroRecipeId,
+            'hero_recipe_portion' => $resolvedHeroRecipePortion,
             'heroRecipe' => $resolvedHeroRecipeId && isset($recipesMap[(string) $resolvedHeroRecipeId]) ? $recipesMap[(string) $resolvedHeroRecipeId] : null,
             // Ensure cover can always render when a hero recipe exists but lacks image.
             'placeholderImage' => public_path('img/recetas/imagen-receta-principal.jpg'),
@@ -1023,6 +1048,7 @@ class CalendarPdfController extends Controller
                         'user' => Auth::user(),
                         'template' => $template,
                         'recipe' => $payload['heroRecipe'],
+                        'portion' => $payload['hero_recipe_portion'] ?? null,
                         'placeholderImage' => $payload['placeholderImage'],
                     ],
                     'a4',
@@ -1088,6 +1114,7 @@ class CalendarPdfController extends Controller
                         'calendar' => $calendar,
                         'calendario' => $calendar,
                         'recipe' => $payload['heroRecipe'],
+                        'portion' => $payload['hero_recipe_portion'] ?? null,
                         'receta_cover_img_src' => $this->resolveRecipeImage($payload['heroRecipe']->imagen_principal ?? null, $placeholderImage),
                     ]),
                     'a4',
@@ -1264,6 +1291,7 @@ class CalendarPdfController extends Controller
             $sidesRacion
         );
         [$recipeIngredientsByRecipe, $recipeIngredientsFlat] = $this->buildLegacyRecipeIngredientMaps($payload['recipePages'] ?? []);
+        $recipeNutritionByRecipe = $this->buildLegacyRecipeNutritionMaps($payload['recipePages'] ?? []);
 
         return [
             'calendar' => $calendar,
@@ -1285,6 +1313,7 @@ class CalendarPdfController extends Controller
             'nutritionals_info' => $this->getUserNutritionalsInfo(),
             'nutri_info' => $this->buildLegacyNutritionInfo((int) $calendar->id),
             'recipe_ingredients_data' => $recipeIngredientsByRecipe,
+            'recipe_nutrition_data' => $recipeNutritionByRecipe,
             'recipe_ingredients' => $recipeIngredientsFlat,
             'taken_ingredientes' => collect($payload['taken_ingredientes'] ?? [])->values()->all(),
             'categorias' => collect($payload['categorias'] ?? [])->map(function ($category) {
@@ -1331,6 +1360,23 @@ class CalendarPdfController extends Controller
         }
 
         return [$byRecipe, $flat];
+    }
+
+    private function buildLegacyRecipeNutritionMaps(array $recipePages): array
+    {
+        $byRecipe = [];
+
+        foreach ($recipePages as $recipePage) {
+            $recipe = $recipePage['recipe'] ?? null;
+            $nutrition = $recipePage['nutrition'] ?? null;
+            if (!$recipe) {
+                continue;
+            }
+
+            $byRecipe[$recipe->id] = $nutrition ?? [];
+        }
+
+        return $byRecipe;
     }
 
     private function formatLegacyRecipeIngredient(array $ingredient): string
@@ -1435,36 +1481,77 @@ SVG;
         $ordered = [];
         $meta = [];
 
+        $upsertMeta = function (int $recipeId, float|int $portion, array $context) use (&$ordered, &$meta): void {
+            if (!isset($meta[$recipeId])) {
+                $ordered[] = $recipeId;
+                $meta[$recipeId] = $context + ['portion' => $portion];
+                Log::info('calendar_export.recipe_portion.initial', [
+                    'recipe_id' => $recipeId,
+                    'portion' => $portion,
+                    'context' => $context,
+                ]);
+                return;
+            }
+
+            $existingPortion = (float) ($meta[$recipeId]['portion'] ?? 0);
+            $newPortion = (float) $portion;
+            if ($newPortion > $existingPortion) {
+                $meta[$recipeId] = $context + ['portion' => $portion];
+                Log::info('calendar_export.recipe_portion.updated', [
+                    'recipe_id' => $recipeId,
+                    'previous_portion' => $existingPortion,
+                    'portion' => $newPortion,
+                    'context' => $context,
+                ]);
+                return;
+            }
+
+            Log::info('calendar_export.recipe_portion.skipped', [
+                'recipe_id' => $recipeId,
+                'existing_portion' => $existingPortion,
+                'ignored_portion' => $newPortion,
+                'context' => $context,
+            ]);
+        };
+
         foreach ($mainSchedule as $dayKey => $meals) {
             foreach ($meals as $mealKey => $recipeId) {
-                if ($recipeId && !isset($meta[$recipeId])) {
-                    $portion = $mainRacion[$dayKey][$mealKey]
-                        ?? $mainServings[$dayKey][$mealKey]
+                if ($recipeId) {
+                    $portion = $mainServings[$dayKey][$mealKey]
+                        ?? $mainRacion[$dayKey][$mealKey]
                         ?? 1;
-                    $ordered[] = (int) $recipeId;
-                    $meta[(int) $recipeId] = [
-                        'portion' => $portion,
+                    $upsertMeta((int) $recipeId, $portion, [
                         'day' => $dayKey,
                         'meal' => $mealKey,
                         'type' => 'main',
-                    ];
+                    ]);
                 }
 
                 $sideId = $sidesSchedule[$dayKey][$mealKey] ?? null;
-                if ($sideId && !isset($meta[$sideId])) {
-                    $portion = $sidesRacion[$dayKey][$mealKey]
-                        ?? $sidesServings[$dayKey][$mealKey]
+                if ($sideId) {
+                    $portion = $sidesServings[$dayKey][$mealKey]
+                        ?? $sidesRacion[$dayKey][$mealKey]
                         ?? 1;
-                    $ordered[] = (int) $sideId;
-                    $meta[(int) $sideId] = [
-                        'portion' => $portion,
+                    $upsertMeta((int) $sideId, $portion, [
                         'day' => $dayKey,
                         'meal' => $mealKey,
                         'type' => 'side',
-                    ];
+                    ]);
                 }
             }
         }
+
+        Log::info('calendar_export.recipe_portion.summary', [
+            'ordered_recipe_ids' => $ordered,
+            'recipe_meta' => array_map(function ($item) {
+                return [
+                    'portion' => $item['portion'] ?? null,
+                    'day' => $item['day'] ?? null,
+                    'meal' => $item['meal'] ?? null,
+                    'type' => $item['type'] ?? null,
+                ];
+            }, $meta),
+        ]);
 
         return [$ordered, $meta];
     }

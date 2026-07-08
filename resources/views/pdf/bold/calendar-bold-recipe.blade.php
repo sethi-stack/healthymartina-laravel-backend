@@ -1,7 +1,8 @@
 <?php
     $recipe_ingredients = [];
-    $recipe_porcion = $porcion ?? '';
+    $recipe_porcion = $porcion ?? ($portion ?? '');
     $recipe_ingredients_data = $recipe_ingredients_data ?? [];
+    $recipe_nutrition_data = $recipe_nutrition_data ?? [];
     $export_param = $export_param ?? [];
     $recipe_ingredients_a = $recipe_ingredients_data[$recipe->id] ?? [];
     foreach ($recipe_ingredients_a as $key => $value) {
@@ -19,7 +20,7 @@
             $filter_info[] = $value->id;
         }
     }
-    $nutrientes = $recipe->getInformacionNutrimental();
+    $nutrientes = $recipe_nutrition_data[$recipe->id] ?? $recipe->getInformacionNutrimental();
     $filteredNutri = [];
     foreach (($nutrientes['info'] ?? []) as $nutriente) {
         if (($nutriente['mostrar'] ?? 0) && in_array($nutriente['id'] ?? null, $filter_info)) {
