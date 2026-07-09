@@ -1,6 +1,10 @@
 const { esc } = require("./utils");
 const { renderFooter } = require("./footer");
 
+function stripHtml(value) {
+    return String(value ?? "").replace(/<[^>]*>/g, "").trim();
+}
+
 function renderRecipeStyles() {
     return `
   .recipe-page-primary{padding-bottom:24mm}
@@ -295,7 +299,7 @@ function renderRecipes(model, options = {}) {
                 items
                     .map(
                         (i) =>
-                            `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(i.name)}</span></li>`,
+                            `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(stripHtml(i.name))}</span></li>`,
                     )
                     .join("");
             const renderInstructionItems = (items) =>

@@ -1553,7 +1553,10 @@ SVG;
 
     private function scaleRecipeIngredients(Receta $recipe, float|int $portion): array
     {
-        $ingredients = $recipe->getIngredientes(true);
+        // Keep subrecipes in the exported ingredient list so the recipe page
+        // still shows the parent ingredient and the nested recipe page can be
+        // added separately in the PDF.
+        $ingredients = $recipe->getIngredientes(false);
         $basePortion = max(1, (float) ($recipe->getPorciones()['cantidad'] ?? 1));
         $ratio = max(0, (float) $portion) / $basePortion;
 

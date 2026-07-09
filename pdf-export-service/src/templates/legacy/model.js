@@ -1,5 +1,11 @@
 const { dayDefaultLabels } = require('./components/utils');
 
+function stripHtml(value) {
+  return String(value ?? '')
+    .replace(/<[^>]*>/g, '')
+    .trim();
+}
+
 function normalizeTipsBlocks(rawTips) {
   if (Array.isArray(rawTips)) {
     return rawTips
@@ -149,7 +155,10 @@ function buildLegacyBoldModel(job) {
         ? Number(p.recipe.porciones)
         : null,
     minutos: p.recipe?.tiempo_elaboracion != null ? Number(p.recipe.tiempo_elaboracion) : null,
-    ingredients: (p.ingredients || []).map((i) => ({ name: i.ingrediente || i.nombre || 'Ingrediente', amount: `${i.cantidad || ''} ${i.medida || i.unidad || ''}`.trim() })),
+    ingredients: (p.ingredients || []).map((i) => ({
+      name: stripHtml(i.ingrediente || i.nombre || 'Ingrediente'),
+      amount: `${i.cantidad || ''} ${i.medida || i.unidad || ''}`.trim(),
+    })),
     instructions: p.recipe?.instrucciones || [],
     nutrition: (p.nutrition || []).map((n) => ({
       name: n.nombre || 'Nutriente',

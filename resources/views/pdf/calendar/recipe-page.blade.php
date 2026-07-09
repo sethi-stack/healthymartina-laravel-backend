@@ -66,6 +66,9 @@
       }
     }
     $instructions = method_exists($recipe, 'getInstrucciones') ? $recipe->getInstrucciones() : [];
+    $stripHtml = function ($value) {
+      return trim(strip_tags((string) ($value ?? '')));
+    };
   @endphp
   <style>
     @page {
@@ -240,7 +243,7 @@
             @foreach($ingredients as $ingredient)
               <li>
                 <div class="ingredient-line">
-                  <span class="ingredient-name">{!! $ingredient['ingrediente'] ?? 'Ingrediente' !!}</span>
+                  <span class="ingredient-name">{{ $stripHtml($ingredient['ingrediente'] ?? 'Ingrediente') }}</span>
                   <span class="ingredient-qty">
                     @if(isset($ingredient['cantidad']) && $ingredient['cantidad'] !== '')
                       {{ $ingredient['cantidad'] }}
