@@ -3,7 +3,7 @@ function esc(value) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/\"/g, '&quot;')
+    .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
 
@@ -30,4 +30,16 @@ function mealDefaultLabels() {
   };
 }
 
-module.exports = { esc, dayDefaultLabels, mealDefaultLabels };
+function uniqueRecipePages(recipePages) {
+  const seen = new Set();
+  return (Array.isArray(recipePages) ? recipePages : []).filter((page) => {
+    const recipeId = page?.recipe?.id != null ? String(page.recipe.id) : '';
+    if (!recipeId || seen.has(recipeId)) {
+      return false;
+    }
+    seen.add(recipeId);
+    return true;
+  });
+}
+
+module.exports = { esc, dayDefaultLabels, mealDefaultLabels, uniqueRecipePages };

@@ -4,6 +4,7 @@ const { renderWeeklyPlan } = require('./components/weeklyPlan');
 const { renderNutritionSummary } = require('./components/nutrition');
 const { renderLista } = require('./components/lista');
 const { renderRecipes } = require('./components/recipes');
+const { uniqueRecipePages } = require('./components/utils');
 
 function esc(value) {
   return String(value ?? '')
@@ -140,7 +141,7 @@ function buildLista(model) {
 }
 
 function buildRecipes(model) {
-  const recipePages = Array.isArray(model.recipePages) ? model.recipePages : [];
+  const recipePages = uniqueRecipePages(model.recipePages);
 
   return recipePages.map((page) => {
     const recipe = page.recipe || {};

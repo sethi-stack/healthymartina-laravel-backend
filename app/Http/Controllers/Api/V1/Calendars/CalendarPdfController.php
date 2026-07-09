@@ -602,7 +602,7 @@ class CalendarPdfController extends Controller
             $mainRacion,
             $sidesRacion
         );
-        $selected = array_values(array_filter(array_map('intval', $validated['selected_recipes'] ?? [])));
+        $selected = array_values(array_unique(array_filter(array_map('intval', $validated['selected_recipes'] ?? []))));
         $requestedRecipePortions = [];
         foreach (($validated['recipe_portions'] ?? []) as $recipeId => $portion) {
             if (is_numeric($portion)) {
@@ -907,7 +907,7 @@ class CalendarPdfController extends Controller
             $sidesRacion
         );
 
-        $selectedRecipeIds = array_values(array_filter(array_map('intval', $selectedRecipeIds ?? [])));
+        $selectedRecipeIds = array_values(array_unique(array_filter(array_map('intval', $selectedRecipeIds ?? []))));
         if (empty($selectedRecipeIds)) {
             $selectedRecipeIds = $calendarRecipeIds;
         }

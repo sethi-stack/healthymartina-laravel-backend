@@ -1,4 +1,4 @@
-const { dayDefaultLabels } = require('./components/utils');
+const { dayDefaultLabels, uniqueRecipePages } = require('./components/utils');
 
 function stripHtml(value) {
   return String(value ?? '')
@@ -145,7 +145,7 @@ function buildLegacyBoldModel(job) {
     })),
   }));
 
-  const recipePages = payload.recipePages || [];
+  const recipePages = uniqueRecipePages(payload.recipePages || []);
   const recipes = recipePages.map((p) => ({
     title: p.recipe?.titulo || 'Receta',
     image: p.recipe?.imagen_principal || '',
