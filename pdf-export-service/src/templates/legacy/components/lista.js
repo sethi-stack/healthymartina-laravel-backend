@@ -3,6 +3,64 @@ const { renderFooter } = require('./footer');
 
 const MAX_ROWS_PER_COLUMN = 16;
 
+function gcd(a, b) {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+function toFraction(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  const whole = Math.floor(abs + 1e-9);
+  const frac = abs - whole;
+  if (frac < 1e-6) return `${sign}${whole}`;
+
+  const denominators = [2, 3, 4, 8, 16];
+  let best = null;
+  for (const denominator of denominators) {
+    const numerator = Math.round(frac * denominator);
+    const approx = numerator / denominator;
+    const err = Math.abs(frac - approx);
+    if (!best || err < best.err) {
+      best = { numerator, denominator, err };
+    }
+  }
+
+  if (!best || best.numerator === 0) return `${sign}${whole}`;
+  if (best.numerator === best.denominator) return `${sign}${whole + 1}`;
+
+  const div = gcd(best.numerator, best.denominator);
+  const numerator = best.numerator / div;
+  const denominator = best.denominator / div;
+
+  if (whole > 0) return `${sign}${whole} ${numerator}/${denominator}`;
+  return `${sign}${numerator}/${denominator}`;
+}
+
+function formatAmountWithFractions(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+
+  const match = text.match(/^(-?\d+(?:[.,]\d+)?)\s*(.*)$/);
+  if (!match) return text;
+
+  const num = match[1].replace(',', '.');
+  const rest = String(match[2] || '').trim();
+  const frac = toFraction(num);
+  if (!frac) return text;
+
+  return `${frac}${rest ? ` ${rest}` : ''}`;
+}
+
 function renderListaStyles() {
   return `
   .lista-grid{width:100%;border-collapse:collapse}.lista-grid td{width:50%;vertical-align:top;padding:0 12px 0 0}
@@ -84,9 +142,10 @@ function renderLista(model) {
     const items = (cat.items || []).map((item) => {
       const ingredientId = item.id ?? item.ingrediente_id ?? null;
       const isTaken = ingredientId !== null && taken.has(String(ingredientId));
+      const amount = formatAmountWithFractions(item.amount || '');
       return `<div class="lista-item-row">
         <span class="checkbox-cell">${isTaken ? '&#9745;' : '&#9744;'}</span>
-        <span class="item-amount ${isTaken ? 'item-taken' : ''}">${esc(item.amount || '')}</span>
+        <span class="item-amount ${isTaken ? 'item-taken' : ''}">${esc(amount)}</span>
         <span class="item-name ${isTaken ? 'item-taken' : ''}">${esc(item.name)}</span>
       </div>`;
     }).join('');

@@ -76,6 +76,17 @@ function normalizeTipsBlocks(rawTips) {
   return blocks.filter((item) => item && (item.title || item.description));
 }
 
+function formatRoundedNutritionAmount(amount, unit) {
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric)) {
+    return String(unit || '').trim();
+  }
+
+  const rounded = String(Math.round(numeric));
+
+  return `${rounded}${unit ? ` ${unit}` : ''}`.trim();
+}
+
 function buildLegacyBoldModel(job) {
   const payload = job.payload || {};
   const snapshot = payload.calendar_snapshot || {};
@@ -162,20 +173,11 @@ function buildLegacyBoldModel(job) {
     instructions: p.recipe?.instrucciones || [],
     nutrition: (p.nutrition || []).map((n) => ({
       name: n.nombre || 'Nutriente',
-      amount: `${n.cantidad || ''} ${n.unidad_medida || ''}`.trim(),
+      amount: formatRoundedNutritionAmount(n.cantidad, n.unidad_medida || ''),
     })),
     tips: p.recipe?.tips || '',
     tipsBlocks: normalizeTipsBlocks(p.recipe?.tips),
   }));
-
-  console.log('[pdf-export] legacy model recipe pages', {
-    job_id: job.id,
-    recipe_pages: recipePages.map((page) => ({
-      recipe_id: page?.recipe?.id ?? null,
-      title: page?.recipe?.titulo || null,
-      portion: page?.portion ?? null,
-    })),
-  });
 
   const nutritionDays = (payload.nutritionByDay || []).map((day) => ({
     dayKey: day.day_key || '',

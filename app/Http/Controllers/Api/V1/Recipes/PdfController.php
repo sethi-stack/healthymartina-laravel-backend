@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Api\V1\Recipes;
 use App\Http\Controllers\Controller;
 use App\Models\Receta;
 use App\Support\NutritionPreferenceSupport;
-use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use App\Services\Calendar\ExternalPdfExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PdfController extends Controller
 {
@@ -29,28 +30,6 @@ class PdfController extends Controller
         }, array_values(NutritionPreferenceSupport::normalizeNutritionInfo($storedNutritionInfo)));
     }
 
-    private function formatRecipeIngredient(array $ingredient): string
-    {
-        $quantity = $ingredient['cantidad'] ?? '';
-        $measure = '';
-
-        if ($quantity !== '' && is_numeric($quantity) && (float) $quantity > 1) {
-            $measure = $ingredient['medida_plural'] ?? ($ingredient['medida'] ?? '');
-        } else {
-            $measure = $ingredient['medida'] ?? '';
-        }
-
-        $parts = [];
-        if ($quantity !== '') {
-            $parts[] = $quantity;
-        }
-        if ($measure !== '') {
-            $parts[] = mb_strtolower($measure);
-        }
-
-        return trim(implode(' ', $parts));
-    }
-
     private function scaleRecipeIngredients(Receta $recipe, float|int $portion): array
     {
         $ingredients = $recipe->getIngredientes(true);
@@ -60,65 +39,214 @@ class PdfController extends Controller
         return array_map(function (array $ingredient) use ($ratio) {
             if (isset($ingredient['cantidad']) && is_numeric($ingredient['cantidad'])) {
                 $scaled = (float) $ingredient['cantidad'] * $ratio;
-                $ingredient['cantidad'] = rtrim(rtrim(number_format($scaled, 2, '.', ''), '0'), '.');
+                $ingredient['cantidad'] = $this->formatMixedFraction($scaled);
             }
 
             return $ingredient;
         }, $ingredients);
     }
 
-    private function buildRecipePdf(Receta $recipe, $nutritionalsInfo, $user, float|int $portion)
+    private function formatMixedFraction(float $value): string
     {
-        $recipeImageSrc = $recipe->imagen_principal;
-        $rawImagePath = $recipe->getRawOriginal('imagen_principal');
-        if (!empty($rawImagePath)) {
-            try {
-                $disk = config('filesystems.default', 'local');
-                $binary = Storage::disk($disk)->get($rawImagePath);
-                $extension = strtolower(pathinfo($rawImagePath, PATHINFO_EXTENSION));
-                $mime = match ($extension) {
-                    'png' => 'image/png',
-                    'gif' => 'image/gif',
-                    'webp' => 'image/webp',
-                    default => 'image/jpeg',
-                };
-                $recipeImageSrc = 'data:' . $mime . ';base64,' . base64_encode($binary);
-            } catch (\Throwable $e) {
-                // Fallback to URL accessor when direct read is unavailable.
-                $recipeImageSrc = $recipe->imagen_principal;
+        $sign = $value < 0 ? '-' : '';
+        $abs = abs($value);
+        $whole = (int) floor($abs + 1e-9);
+        $fraction = $abs - $whole;
+
+        if ($fraction < 1e-6) {
+            return $sign . (string) $whole;
+        }
+
+        $denominators = [2, 3, 4, 8, 16];
+        $best = null;
+        foreach ($denominators as $denominator) {
+            $numerator = (int) round($fraction * $denominator);
+            $approximation = $numerator / $denominator;
+            $error = abs($fraction - $approximation);
+            if ($best === null || $error < $best['error']) {
+                $best = [
+                    'numerator' => $numerator,
+                    'denominator' => $denominator,
+                    'error' => $error,
+                ];
             }
         }
 
+        if ($best === null || $best['numerator'] === 0) {
+            return $sign . (string) $whole;
+        }
+
+        if ($best['numerator'] === $best['denominator']) {
+            return $sign . (string) ($whole + 1);
+        }
+
+        $numerator = $best['numerator'];
+        $denominator = $best['denominator'];
+        $divisor = $this->greatestCommonDivisor($numerator, $denominator);
+        $numerator = intdiv($numerator, $divisor);
+        $denominator = intdiv($denominator, $divisor);
+
+        if ($whole > 0) {
+            return sprintf('%s%d %d/%d', $sign, $whole, $numerator, $denominator);
+        }
+
+        return sprintf('%s%d/%d', $sign, $numerator, $denominator);
+    }
+
+    private function greatestCommonDivisor(int $a, int $b): int
+    {
+        $x = abs($a);
+        $y = abs($b);
+        while ($y !== 0) {
+            $temp = $y;
+            $y = $x % $y;
+            $x = $temp;
+        }
+
+        return $x ?: 1;
+    }
+
+    private function buildExternalPayload(Receta $recipe, float|int $portion, $nutritionalsInfo, $user): array
+    {
         $scaledIngredients = $this->scaleRecipeIngredients($recipe, $portion);
         $recipeNutrition = $recipe->getInformacionNutrimental();
-        $recipeIngredientsData = [];
-        foreach ($scaledIngredients as $ingredient) {
-            $uid = $ingredient['ingred_uid'] ?? null;
-            if (!$uid) {
-                continue;
+        $nutritionRows = [];
+        foreach (($recipeNutrition['info'] ?? []) as $nutrient) {
+            if (!empty($nutrient['mostrar'])) {
+                $nutritionRows[] = [
+                    'nombre' => $nutrient['nombre'] ?? 'Nutriente',
+                    'cantidad' => isset($nutrient['cantidad']) ? round((float) $nutrient['cantidad'], 2) : null,
+                    'unidad_medida' => $nutrient['unidad_medida'] ?? '',
+                ];
             }
-            $recipeIngredientsData[$recipe->id][$uid] = $this->formatRecipeIngredient($ingredient);
         }
 
-        // Legacy parity: use Advanced/Bold recipe template by default.
-        $viewData = [
-            'recipe' => $recipe,
-            'nutritionals_info' => $nutritionalsInfo,
-            'export_param' => [3, 4], // include tips + nutrition blocks
-            'porcion' => $portion,
+        $recipePage = [
+            'recipe' => [
+                'id' => (int) $recipe->id,
+                'titulo' => (string) ($recipe->titulo ?? 'Receta'),
+                'imagen_principal' => (string) ($recipe->imagen_principal ?? ''),
+                'porciones' => (int) ($recipe->porciones ?? ($recipe->getPorciones()['cantidad'] ?? 1)),
+                'tiempo_elaboracion' => (int) ($recipe->tiempo_elaboracion ?? ($recipe->tiempo ?? 0)),
+                'instrucciones' => array_values($recipe->getInstrucciones() ?? []),
+                'tips' => implode(PHP_EOL, array_values($recipe->getTipsPlain() ?? [])),
+            ],
             'portion' => $portion,
-            'recipe_ingredients_data' => $recipeIngredientsData,
-            'recipe_nutrition_data' => [$recipe->id => $recipeNutrition],
-            'recipe_image_src' => $recipeImageSrc,
+            'ingredients' => array_map(function (array $ingredient) {
+                return [
+                    'ingrediente' => $ingredient['ingrediente'] ?? ($ingredient['nombre'] ?? 'Ingrediente'),
+                    'cantidad' => $ingredient['cantidad'] ?? null,
+                    'medida' => $ingredient['medida'] ?? ($ingredient['unidad'] ?? ''),
+                    'unidad' => $ingredient['unidad'] ?? ($ingredient['medida'] ?? ''),
+                ];
+            }, $scaledIngredients),
+            'nutrition' => $nutritionRows,
         ];
 
-        return PDF::loadView('pdf.bold.calendar-bold-recipe', $viewData)->setPaper('a4', 'portrait');
+        return [
+            'template' => 'bold',
+            'export_param' => [1],
+            'hero_recipe_id' => (int) $recipe->id,
+            'heroRecipe' => [
+                'id' => (int) $recipe->id,
+                'titulo' => (string) ($recipe->titulo ?? 'Receta'),
+                'imagen_principal' => (string) ($recipe->imagen_principal ?? ''),
+            ],
+            'selected_recipes' => [(int) $recipe->id],
+            'recipePages' => [$recipePage],
+            'nutritionByDay' => [],
+            'listaData' => [
+                'categories' => [],
+                'taken_ids' => [],
+            ],
+            'brandName' => (string) ($user->bname ?: 'Healthy Martina'),
+            'brandEmail' => (string) ($user->bemail ?: $user->email),
+            'brandLogo' => (string) ($user->bimage ?: ''),
+            'brandColor' => (string) ($user->color ?: '#36544e'),
+            'calendar_snapshot' => [
+                'id' => (int) $recipe->id,
+                'title' => (string) ($recipe->titulo ?? 'Receta'),
+                'labels' => [],
+                'main_schedule' => [],
+                'sides_schedule' => [],
+                'main_servings' => [],
+                'sides_servings' => [],
+                'main_racion' => [],
+                'sides_racion' => [],
+                'main_leftovers' => [],
+                'sides_leftovers' => [],
+                'recipe_ids' => [(int) $recipe->id],
+                'recipes_map' => [
+                    (string) $recipe->id => [
+                        'id' => (int) $recipe->id,
+                        'titulo' => (string) ($recipe->titulo ?? 'Receta'),
+                        'imagen_principal' => (string) ($recipe->imagen_principal ?? ''),
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function renderExternalRecipePdf(Receta $recipe, float|int $portion, $nutritionalsInfo, $user, ExternalPdfExportService $externalPdfExportService): string
+    {
+        $jobId = (string) Str::uuid();
+        $payload = $this->buildExternalPayload($recipe, $portion, $nutritionalsInfo, $user);
+
+        Log::info('[pdf-export] recipe external payload summary', [
+            'job_id' => $jobId,
+            'recipe_id' => $recipe->id,
+            'portion' => $portion,
+            'selected_recipes' => $payload['selected_recipes'] ?? [],
+            'recipe_pages_count' => count($payload['recipePages'] ?? []),
+            'ingredient_amounts' => array_map(function ($ingredient) {
+                return $ingredient['cantidad'] ?? null;
+            }, $payload['recipePages'][0]['ingredients'] ?? []),
+        ]);
+
+        $serviceResponse = $externalPdfExportService->enqueue([
+            'job_id' => $jobId,
+            'user_id' => Auth::id(),
+            'calendar_id' => $recipe->id,
+            'request_payload' => [
+                'calendar' => $recipe->id,
+                'export_param' => [1],
+                'template' => 'bold',
+                'selected_recipes' => [(int) $recipe->id],
+                'portion' => $portion,
+            ],
+            'payload' => $payload,
+        ]);
+
+        $externalJobId = (string) ($serviceResponse['job_id'] ?? $jobId);
+        $deadline = microtime(true) + 90;
+
+        while (microtime(true) < $deadline) {
+            $status = $externalPdfExportService->status($externalJobId);
+            $state = (string) ($status['status'] ?? '');
+            if ($state === 'completed') {
+                $binary = $externalPdfExportService->downloadBinary($externalJobId);
+                Log::info('[pdf-export] recipe external download', [
+                    'job_id' => $jobId,
+                    'external_job_id' => $externalJobId,
+                    'content_type' => $binary['content_type'] ?? null,
+                    'bytes' => strlen((string) ($binary['body'] ?? '')),
+                ]);
+                return (string) ($binary['body'] ?? '');
+            }
+            if ($state === 'failed') {
+                $message = (string) ($status['error_message'] ?? $status['message'] ?? 'Export failed');
+                throw new \RuntimeException($message);
+            }
+            usleep(750000);
+        }
+
+        throw new \RuntimeException('Recipe PDF export timed out.');
     }
 
     /**
      * Generate and download recipe PDF.
      */
-    public function download(Request $request, int $recipeId)
+    public function download(Request $request, int $recipeId, ExternalPdfExportService $externalPdfExportService)
     {
         $validated = $request->validate([
             'portion' => 'nullable|numeric|min:1',
@@ -128,15 +256,30 @@ class PdfController extends Controller
         $nutritionals_info = $this->getUserNutritionalsInfo($user);
         $portion = (float) ($validated['portion'] ?? $recipe->getPorciones()['cantidad'] ?? 1);
 
-        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user, $portion);
+        try {
+            $pdfBinary = $this->renderExternalRecipePdf($recipe, $portion, $nutritionals_info, $user, $externalPdfExportService);
 
-        return $pdf->download($recipe->titulo . '.pdf');
+            return response($pdfBinary, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $recipe->titulo . '.pdf"',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[pdf-export] recipe external render failed', [
+                'recipe_id' => $recipe->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'PDF export service is unavailable.',
+            ], 503);
+        }
     }
 
     /**
      * Generate and email recipe PDF.
      */
-    public function email(Request $request, int $recipeId)
+    public function email(Request $request, int $recipeId, ExternalPdfExportService $externalPdfExportService)
     {
         $validated = $request->validate([
             'recipient_email_address' => 'nullable|email',
@@ -159,7 +302,19 @@ class PdfController extends Controller
 
         $nutritionals_info = $this->getUserNutritionalsInfo($user);
 
-        $pdf = $this->buildRecipePdf($recipe, $nutritionals_info, $user, $portion);
+        try {
+            $pdfBinary = $this->renderExternalRecipePdf($recipe, $portion, $nutritionals_info, $user, $externalPdfExportService);
+        } catch (\Throwable $e) {
+            Log::error('[pdf-export] recipe external email render failed', [
+                'recipe_id' => $recipe->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'PDF export service is unavailable.',
+            ], 503);
+        }
 
         // Prepare email data
         $data = [
@@ -175,10 +330,10 @@ class PdfController extends Controller
 
         try {
             // Send recipe to recipient
-            Mail::send('email.send-recipe', $data, function ($message) use ($data, $pdf) {
+            Mail::send('email.send-recipe', $data, function ($message) use ($data, $pdfBinary) {
                 $message->to($data['email'], $data['email'])
                     ->subject($data['title'])
-                    ->attachData($pdf->output(), $data['recipe']->titulo . ".pdf");
+                    ->attachData($pdfBinary, $data['recipe']->titulo . ".pdf");
             });
 
             // Send delivery confirmation to user
@@ -188,10 +343,10 @@ class PdfController extends Controller
                 'to' => $data['email'],
                 'title' => $data['title'],
                 'current_time' => todaySpanishDay()
-            ], function ($message) use ($data, $pdf, $user) {
+            ], function ($message) use ($data, $pdfBinary, $user) {
                 $message->to($user->bemail, $user->bemail)
                     ->subject('Tu receta fue entregada.')
-                    ->attachData($pdf->output(), $data['recipe']->titulo . ".pdf");
+                    ->attachData($pdfBinary, $data['recipe']->titulo . ".pdf");
             });
 
             return response()->json([
