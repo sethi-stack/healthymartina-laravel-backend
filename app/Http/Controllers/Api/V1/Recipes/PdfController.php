@@ -67,29 +67,6 @@ class PdfController extends Controller
         }, $ingredients);
     }
 
-    private function scaleRecipeNutrition(Receta $recipe, float|int $portion): array
-    {
-        $nutrition = $recipe->getInformacionNutrimental();
-        $basePortion = max(1, (float) ($recipe->getPorciones()['cantidad'] ?? 1));
-        $ratio = max(0, (float) $portion) / $basePortion;
-
-        if (!isset($nutrition['info']) || !is_array($nutrition['info'])) {
-            return $nutrition;
-        }
-
-        foreach ($nutrition['info'] as $nutrientId => $nutrientInfo) {
-            if (isset($nutrientInfo['cantidad']) && is_numeric($nutrientInfo['cantidad'])) {
-                $nutrition['info'][$nutrientId]['cantidad'] = $nutrientInfo['cantidad'] * $ratio;
-            }
-
-            if (isset($nutrientInfo['porcentaje']) && is_numeric($nutrientInfo['porcentaje'])) {
-                $nutrition['info'][$nutrientId]['porcentaje'] = $nutrientInfo['porcentaje'] * $ratio;
-            }
-        }
-
-        return $nutrition;
-    }
-
     private function buildRecipePdf(Receta $recipe, $nutritionalsInfo, $user, float|int $portion)
     {
         $recipeImageSrc = $recipe->imagen_principal;
@@ -113,7 +90,7 @@ class PdfController extends Controller
         }
 
         $scaledIngredients = $this->scaleRecipeIngredients($recipe, $portion);
-        $scaledNutrition = $this->scaleRecipeNutrition($recipe, $portion);
+        $recipeNutrition = $recipe->getInformacionNutrimental();
         $recipeIngredientsData = [];
         foreach ($scaledIngredients as $ingredient) {
             $uid = $ingredient['ingred_uid'] ?? null;
@@ -131,7 +108,7 @@ class PdfController extends Controller
             'porcion' => $portion,
             'portion' => $portion,
             'recipe_ingredients_data' => $recipeIngredientsData,
-            'recipe_nutrition_data' => [$recipe->id => $scaledNutrition],
+            'recipe_nutrition_data' => [$recipe->id => $recipeNutrition],
             'recipe_image_src' => $recipeImageSrc,
         ];
 
