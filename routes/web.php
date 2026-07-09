@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->to(backpack_url('dashboard'));
 });
 
 // Redirect framework "dashboard" style routes to Backpack, to avoid confusion.
@@ -14,6 +14,11 @@ Route::get('/dashboard', function () {
 // Test route for Backpack
 Route::get('/test-backpack', function () {
     return 'Backpack test route works!';
+});
+
+// Send /login directly to the Backpack admin login page.
+Route::get('/login', function () {
+    return redirect()->to(backpack_url('login'));
 });
 
 // Test Backpack config
@@ -33,4 +38,6 @@ Route::get('/test-backpack-config', function () {
 
 Auth::routes();
 
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('/home', function () {
+    return redirect()->to(backpack_url('dashboard'));
+})->name('home');
