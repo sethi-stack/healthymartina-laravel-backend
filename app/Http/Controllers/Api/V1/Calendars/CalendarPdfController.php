@@ -616,9 +616,6 @@ class CalendarPdfController extends Controller
         if (empty($selected) && !empty($calendarRecipeIds)) {
             $selected = $calendarRecipeIds;
         }
-        if ($heroRecipeId) {
-            $selected = array_values(array_filter($selected, fn ($id) => (int) $id !== $heroRecipeId));
-        }
         $recipeIdsToLoad = array_values(array_unique(array_filter(array_merge($calendarRecipeIds, $selected, $heroRecipeId ? [$heroRecipeId] : []))));
         $recipes = empty($recipeIdsToLoad)
             ? collect()
@@ -916,10 +913,6 @@ class CalendarPdfController extends Controller
         }
 
         $heroRecipeId = $heroRecipeId ? (int) $heroRecipeId : null;
-        if ($heroRecipeId) {
-            $selectedRecipeIds = array_values(array_filter($selectedRecipeIds, fn ($id) => (int) $id !== $heroRecipeId));
-        }
-
         $recipeIdsToLoad = array_values(array_unique(array_filter(array_merge($calendarRecipeIds, $selectedRecipeIds, $heroRecipeId ? [$heroRecipeId] : []))));
         $recipes = empty($recipeIdsToLoad)
             ? collect()
