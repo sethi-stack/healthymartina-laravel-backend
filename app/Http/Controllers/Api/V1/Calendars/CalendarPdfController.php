@@ -647,7 +647,7 @@ class CalendarPdfController extends Controller
                 ?? 1;
             $ingredients = $this->scaleRecipeIngredients($recipe, $portion);
             $nutrition = $this->filterRecipeNutritionForExport(
-                $this->scaleRecipeNutrition($recipe, $portion)
+                $recipe->getInformacionNutrimental()
             );
             $nutritionRows = [];
             foreach (($nutrition['info'] ?? []) as $nutrient) {
@@ -926,7 +926,9 @@ class CalendarPdfController extends Controller
             }
 
             $portion = $recipeMeta[$recipeId]['portion'] ?? $recipe->getPorciones()['cantidad'] ?? 1;
-            $nutrition = $this->scaleRecipeNutrition($recipe, $portion);
+            $nutrition = $this->filterRecipeNutritionForExport(
+                $recipe->getInformacionNutrimental()
+            );
             $recipePages[] = [
                 'recipe' => $recipe,
                 'portion' => $portion,
