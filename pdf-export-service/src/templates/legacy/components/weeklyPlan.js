@@ -1,5 +1,4 @@
 const { esc, dayDefaultLabels, mealDefaultLabels } = require('./utils');
-const { renderFooter } = require('./footer');
 
 const DEFAULT_CALENDAR_FOOTER_THUMBNAIL_THRESHOLD = 5;
 
@@ -144,7 +143,6 @@ function renderWeeklyPlan(model) {
   return `<section class="${pageClass}">
     <div class="section-title">Calendario Semanal</div>
     <div class="weekly-grid">${dayCards}</div>
-    ${showFooter ? renderFooter(model, { compact: denseMode }) : ''}
   </section>`;
 }
 

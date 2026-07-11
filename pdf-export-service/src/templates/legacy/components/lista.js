@@ -1,5 +1,4 @@
 const { esc } = require('./utils');
-const { renderFooter } = require('./footer');
 
 const MAX_ROWS_PER_COLUMN = 16;
 
@@ -157,7 +156,6 @@ function renderLista(model) {
   return pages.map((pageCols) => {
     return `<section class="pdf-page section-break"><div class="section-title">Lista de Compras</div>
       <table class="lista-grid"><tr><td>${renderCol(pageCols.left)}</td><td>${renderCol(pageCols.right)}</td></tr></table>
-      ${renderFooter(model)}
     </section>`;
   }).join('');
 }

@@ -4,6 +4,7 @@ const { renderWeeklyPlan } = require('./components/weeklyPlan');
 const { renderNutritionSummary } = require('./components/nutrition');
 const { renderLista } = require('./components/lista');
 const { renderRecipes } = require('./components/recipes');
+const { renderFooter } = require('./components/footer');
 const { buildLegacyBoldModel } = require('./model');
 
 const SECTION_FLAGS = {
@@ -79,6 +80,7 @@ function renderLegacyBoldDocument(job) {
         }
       },
     }) : ''}
+    ${renderFooter(model, { layout: 'flow' })}
   </body></html>`;
 
   return { html, model };

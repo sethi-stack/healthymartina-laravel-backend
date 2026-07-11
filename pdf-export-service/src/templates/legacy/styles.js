@@ -44,7 +44,7 @@ function renderStyles(model = {}) {
   *{box-sizing:border-box;font-family:DejaVu Sans,Helvetica,Arial,sans-serif}
   html,body{margin:0;padding:0;background:#fff;color:#111}
   .pdf-page{position:relative;width:210mm;min-height:297mm;padding:12mm 12mm 20mm;page-break-after:always;break-after:page;background:#fff;overflow:hidden}
-  .pdf-page:last-child{page-break-after:auto;break-after:auto}
+  .pdf-page:last-of-type{page-break-after:auto;break-after:auto}
   .section-break{break-before:page;page-break-before:always}
   .section-break:first-child{break-before:auto;page-break-before:auto}
   .recipe-avoid-break{break-inside:avoid;page-break-inside:avoid}

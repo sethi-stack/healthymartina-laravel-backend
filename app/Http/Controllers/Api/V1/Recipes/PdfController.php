@@ -106,19 +106,39 @@ class PdfController extends Controller
         return $x ?: 1;
     }
 
+    private function mandatoryExportNutritionIds(): array
+    {
+        return NutritionPreferenceSupport::RECIPE_DEFAULT_IDS;
+    }
+
+    private function filterRecipeNutritionForExport(array $nutrition): array
+    {
+        if (!isset($nutrition['info']) || !is_array($nutrition['info'])) {
+            return $nutrition;
+        }
+
+        $selectedNutritionIds = $this->mandatoryExportNutritionIds();
+
+        $nutrition['info'] = array_values(array_filter($nutrition['info'], function ($nutrient) use ($selectedNutritionIds) {
+            return in_array((int) ($nutrient['id'] ?? 0), $selectedNutritionIds, true);
+        }));
+
+        return $nutrition;
+    }
+
     private function buildExternalPayload(Receta $recipe, float|int $portion, $nutritionalsInfo, $user): array
     {
         $scaledIngredients = $this->scaleRecipeIngredients($recipe, $portion);
-        $recipeNutrition = $recipe->getInformacionNutrimental();
+        $recipeNutrition = $this->filterRecipeNutritionForExport(
+            $recipe->getInformacionNutrimental()
+        );
         $nutritionRows = [];
         foreach (($recipeNutrition['info'] ?? []) as $nutrient) {
-            if (!empty($nutrient['mostrar'])) {
-                $nutritionRows[] = [
-                    'nombre' => $nutrient['nombre'] ?? 'Nutriente',
-                    'cantidad' => isset($nutrient['cantidad']) ? round((float) $nutrient['cantidad'], 2) : null,
-                    'unidad_medida' => $nutrient['unidad_medida'] ?? '',
-                ];
-            }
+            $nutritionRows[] = [
+                'nombre' => $nutrient['nombre'] ?? 'Nutriente',
+                'cantidad' => isset($nutrient['cantidad']) ? round((float) $nutrient['cantidad'], 2) : null,
+                'unidad_medida' => $nutrient['unidad_medida'] ?? '',
+            ];
         }
 
         $recipePage = [
