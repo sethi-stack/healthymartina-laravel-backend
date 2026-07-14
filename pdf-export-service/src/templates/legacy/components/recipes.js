@@ -11,11 +11,11 @@ function renderRecipeStyles() {
   .doc-header--recipe{border-bottom:0;margin-bottom:10px;text-align:center}
   .doc-header--recipe h1{margin:0;font-size:16px;letter-spacing:.02em;text-transform:uppercase;color:var(--hm-brand-color)}
   .recipe-subtitle{margin-top:5px;font-size:12px;color:#000}
-  .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 8px;position:relative}
+  .recipe-top-image{width:100%;height:357pt;overflow:hidden;margin:0 0 14px;position:relative}
   .recipe-page-flow--compact .doc-header--recipe{margin-bottom:6px}
   .recipe-page-flow--compact .doc-header--recipe h1{font-size:15px}
   .recipe-page-flow--compact .recipe-subtitle{margin-top:3px;font-size:11px}
-  .recipe-page-flow--compact .recipe-top-image{height:248pt;margin-bottom:6px}
+  .recipe-page-flow--compact .recipe-top-image{height:248pt;margin-bottom:16px}
   .recipe-page-flow{position:relative}
   .recipe-page-flow::before{
     content:'';
