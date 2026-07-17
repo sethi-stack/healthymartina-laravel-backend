@@ -1,7 +1,9 @@
 const { esc } = require("./utils");
 
 function stripHtml(value) {
-    return String(value ?? "").replace(/<[^>]*>/g, "").trim();
+    return String(value ?? "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
 }
 
 function renderRecipeStyles() {
@@ -49,11 +51,13 @@ function renderRecipeStyles() {
   .ingredient-list li{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:1px 0;font-size:11px;line-height:1.28}
   .ingredient-list .ing-amount{font-weight:800;color:#000;white-space:nowrap;font-size:11px}
   .ingredient-list .ing-name{color:#000;font-size:11px}
+  .ingredient-list .ing-note{color:#555;font-size:9px;line-height:1.22;font-style:italic}
   .instruction-list{padding-left:20px;list-style:decimal}
   .instruction-list li{font-size:12px;line-height:1.34;padding-left:2px}
   .recipe-page-flow--compact .ingredient-list li{grid-template-columns:84px 1fr;gap:8px;padding:0;margin-bottom:4px;font-size:10px;line-height:1.18}
   .recipe-page-flow--compact .ingredient-list .ing-amount,
   .recipe-page-flow--compact .ingredient-list .ing-name{font-size:10px}
+  .recipe-page-flow--compact .ingredient-list .ing-note{font-size:8px}
   .recipe-page-flow--compact .instruction-list{padding-left:18px}
   .recipe-page-flow--compact .instruction-list li{font-size:11px;line-height:1.22;margin-bottom:4px}
   .nutrition-table{width:100%;border-collapse:collapse;font-size:9px}.nutrition-table td{padding:3px 0;border-bottom:1px solid rgba(0,0,0,.06)}`;
@@ -233,7 +237,7 @@ function renderRecipes(model, options = {}) {
                 items
                     .map(
                         (i) =>
-                            `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(stripHtml(i.name))}</span></li>`,
+                            `<li><span class="ing-amount">${formatAmountWithFractions(i.amount)}</span><span class="ing-name">${esc(stripHtml(i.name))}${i.note ? ` <span class="ing-note">(${nl2br(stripHtml(i.note))})</span>` : ""}</span></li>`,
                     )
                     .join("");
             const renderInstructionItems = (items) =>

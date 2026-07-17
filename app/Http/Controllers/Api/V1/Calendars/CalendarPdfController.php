@@ -677,10 +677,12 @@ class CalendarPdfController extends Controller
                         'cantidad' => $ingredient['cantidad'] ?? null,
                         'medida' => $ingredient['medida'] ?? ($ingredient['unidad'] ?? ''),
                         'unidad' => $ingredient['unidad'] ?? ($ingredient['medida'] ?? ''),
+                        'nota' => $ingredient['nota'] ?? '',
                     ];
                 }, $ingredients),
                 'nutrition' => $nutritionRows,
             ];
+
         }
 
         $nutritionByDay = [];
@@ -935,6 +937,7 @@ class CalendarPdfController extends Controller
                 'ingredients' => $this->scaleRecipeIngredients($recipe, $portion),
                 'nutrition' => $nutrition,
             ];
+
         }
 
         $heroRecipe = $heroRecipeId ? ($recipes[$heroRecipeId] ?? null) : null;

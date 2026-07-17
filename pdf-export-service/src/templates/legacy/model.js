@@ -169,6 +169,7 @@ function buildLegacyBoldModel(job) {
     ingredients: (p.ingredients || []).map((i) => ({
       name: stripHtml(i.ingrediente || i.nombre || 'Ingrediente'),
       amount: `${i.cantidad || ''} ${i.medida || i.unidad || ''}`.trim(),
+      note: stripHtml(i.nota || ''),
     })),
     instructions: p.recipe?.instrucciones || [],
     nutrition: (p.nutrition || []).map((n) => ({

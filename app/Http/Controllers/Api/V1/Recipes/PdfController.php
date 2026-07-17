@@ -158,6 +158,7 @@ class PdfController extends Controller
                     'cantidad' => $ingredient['cantidad'] ?? null,
                     'medida' => $ingredient['medida'] ?? ($ingredient['unidad'] ?? ''),
                     'unidad' => $ingredient['unidad'] ?? ($ingredient['medida'] ?? ''),
+                    'nota' => $ingredient['nota'] ?? '',
                 ];
             }, $scaledIngredients),
             'nutrition' => $nutritionRows,

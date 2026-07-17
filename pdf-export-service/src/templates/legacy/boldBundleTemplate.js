@@ -157,6 +157,7 @@ function buildRecipes(model) {
       ingredients: (page.ingredients || []).map((item) => ({
         name: item.ingrediente || item.nombre || 'Ingrediente',
         amount: `${item.cantidad || ''} ${item.medida || item.unidad || ''}`.trim(),
+        note: String(item.nota || '').trim(),
       })),
       instructions: Array.isArray(recipe.instrucciones) ? recipe.instrucciones : [],
       nutrition: (page.nutrition || []).map((item) => ({
