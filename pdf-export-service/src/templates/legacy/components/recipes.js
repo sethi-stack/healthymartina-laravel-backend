@@ -244,7 +244,9 @@ function renderRecipes(model, options = {}) {
                 items.map((s) => `<li>${esc(s)}</li>`).join("");
 
             const metaPorciones =
-                r.porciones != null ? `${esc(r.porciones)} porciones` : "";
+                r.porciones != null
+                    ? `${esc(r.porciones)} ${Number(r.porciones) === 1 ? 'porción' : 'porciones'}`
+                    : "";
             const metaMinutos =
                 r.minutos != null && r.minutos > 0
                     ? `${esc(r.minutos)} minutos`
